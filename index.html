@@ -3,185 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RealVladilena - Links</title>
-    <link rel="icon" href="imgs/rlvlena032026.png" type="image/x-icon">
-    
-    <!-- Intégration de TailwindCSS et de la configuration E82.fr -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            purple: '#8b5cf6',
-                            bg: '#f8fafc',
-                            darkBg: '#0f172a',
-                            accent: '#e2e8f0'
-                        }
-                    },
-                    fontFamily: {
-                        'mono-custom': ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace']
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        .bg-grid-pattern {
-            background-image: linear-gradient(to right, rgba(139, 92, 246, 0.1) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
-            background-size: 40px 40px;
-        }
-        .dark .bg-grid-pattern {
-            background-image: linear-gradient(to right, rgba(139, 92, 246, 0.05) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(139, 92, 246, 0.05) 1px, transparent 1px);
-        }
-    </style>
+    <title>OcciClean - Liens</title>
+    <meta name="description" content="Retrouvez OcciClean, nettoyage professionnel à Toulouse : site web, contact et réseaux sociaux.">
+    <meta name="theme-color" content="#0f6cf4">
+
+    <!-- Aperçu lors du partage (Open Graph / Twitter) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="OcciClean - Liens">
+    <meta property="og:description" content="Nettoyage professionnel à Toulouse. Tous nos liens au même endroit.">
+    <meta property="og:url" content="https://occi-clean.fr">
+    <meta name="twitter:card" content="summary">
+
+    <!-- Favicon : logo OcciClean -->
+    <link rel="icon" type="image/png" href="assets/logo.png">
+
+    <!-- CSS Tailwind compilé. Régénérer via `npm run build` (voir README.md). -->
+    <link rel="stylesheet" href="assets/tailwind.css">
 </head>
 <body class="bg-brand-bg dark:bg-brand-darkBg text-slate-800 dark:text-slate-200 transition-colors duration-300 min-h-screen flex flex-col relative overflow-x-hidden">
 
-    <!-- Décoration "Code/Science" en fond -->
-    <div class="absolute inset-0 pointer-events-none z-0 bg-grid-pattern fixed">
-        <div class="absolute top-10 left-4 md:left-10 opacity-10 text-xs font-mono-custom whitespace-pre text-brand-purple">
-function calcTurbinePower(v)
-    local rho = 1.225
-    local A = math.pi * (41^2)
-    local Cp = 0.45
-    return 0.5 * rho * A * (v^3) * Cp
-end
-        </div>
-        <div class="absolute bottom-20 right-4 md:right-10 opacity-10 text-xs font-mono-custom whitespace-pre text-brand-purple hidden sm:block">
--- SCADA System Init
-sys.connect("192.168.1.100")
-while true do
-    sys.updateLogs()
-    wait(1)
-end
-        </div>
-    </div>
+    <!-- Décor de fond (grille subtile) -->
+    <div class="fixed inset-0 pointer-events-none z-0 bg-grid-pattern" aria-hidden="true"></div>
 
     <!-- Bouton Mode Clair / Sombre -->
     <div class="absolute top-4 right-4 z-20">
-        <button id="theme-toggle" class="p-2 rounded-lg bg-white dark:bg-slate-800 border border-brand-accent dark:border-white/10 shadow-sm hover:text-brand-purple transition-colors">
-            <svg id="theme-toggle-dark-icon" class="hidden w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-            <svg id="theme-toggle-light-icon" class="hidden w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.22 2.366a1 1 0 011.415 0l.707.707a1 1 0 01-1.414 1.415l-.707-.707a1 1 0 010-1.415zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-4.22 4.22a1 1 0 010 1.415l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.415 0zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-4.22-2.366a1 1 0 01-1.415 0l-.707-.707a1 1 0 011.414-1.415l.707.707a1 1 0 010 1.415zM2 10a1 1 0 011-1h1a1 1 0 110 2H3a1 1 0 01-1-1zm2.366-4.22a1 1 0 010-1.415l.707-.707a1 1 0 011.414 1.415l-.707.707a1 1 0 01-1.415 0zM10 5a5 5 0 100 10 5 5 0 000-10z" clip-rule="evenodd" fill-rule="evenodd"></path></svg>
+        <button id="theme-toggle" type="button" aria-label="Basculer le thème clair/sombre"
+                class="p-2 rounded-lg bg-white dark:bg-slate-800 border border-brand-accent dark:border-white/10 shadow-sm hover:text-brand-primary transition-colors">
+            <svg id="theme-toggle-dark-icon" class="hidden w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+            <svg id="theme-toggle-light-icon" class="hidden w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.22 2.366a1 1 0 011.415 0l.707.707a1 1 0 01-1.414 1.415l-.707-.707a1 1 0 010-1.415zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-4.22 4.22a1 1 0 010 1.415l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.415 0zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-4.22-2.366a1 1 0 01-1.415 0l-.707-.707a1 1 0 011.414-1.415l.707.707a1 1 0 010 1.415zM2 10a1 1 0 011-1h1a1 1 0 110 2H3a1 1 0 01-1-1zm2.366-4.22a1 1 0 010-1.415l.707-.707a1 1 0 011.414 1.415l-.707.707a1 1 0 01-1.415 0zM10 5a5 5 0 100 10 5 5 0 000-10z" clip-rule="evenodd" fill-rule="evenodd"></path></svg>
         </button>
     </div>
 
     <!-- Contenu Principal -->
     <main class="flex-grow flex flex-col items-center justify-center w-full max-w-lg mx-auto px-4 py-8 z-10 relative">
-        
+
         <!-- En-tête Profil -->
-        <div class="flex flex-col items-center mb-6 text-center mt-4">
-            <div class="w-20 h-20 mb-3 rounded-full p-1 border-2 border-brand-purple bg-white dark:bg-slate-800 shadow-md">
-                <img src="imgs/rlvlena032026.png" alt="Profile Picture" class="w-full h-full rounded-full object-cover">
-            </div>
-            <h1 class="text-xl font-bold tracking-tight">RealVladilena <span class="text-brand-purple font-mono-custom text-base">&lt;RlVlena/&gt;</span></h1>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono-custom">Passionné d'éoliennes & d'informatique</p>
-            <a href="mailto:hello@delta-online.fr" class="text-xs text-brand-purple hover:text-brand-purple/80 mt-0.5 font-mono-custom transition-colors">hello@delta-online.fr</a>
-        </div>
+        <header class="flex flex-col items-center mb-6 text-center mt-2">
+            <img src="assets/logo.png" alt="OcciClean - Nettoyage automobile à domicile"
+                 width="806" height="434" class="w-64 max-w-[80%] h-auto mb-1">
+            <h1 class="sr-only">OcciClean - Nettoyage automobile à domicile</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono-custom">Toulouse &amp; Occitanie</p>
+        </header>
 
         <!-- Liste des Liens -->
-        <div class="w-full flex flex-col gap-2.5">
-            
-            <!-- Carte Spéciale PRST Vision -->
-            <a href="https://prts-vision.com/" class="flex items-center gap-3 p-3 rounded-lg border-2 border-brand-purple/40 dark:border-brand-purple/50 bg-brand-purple/5 dark:bg-brand-purple/10 hover:border-brand-purple hover:bg-brand-purple/10 dark:hover:bg-brand-purple/20 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 group backdrop-blur-sm relative overflow-hidden">
-                <!-- Petit effet de brillance en haut à droite -->
-                <div class="absolute top-0 right-0 p-1">
-                    <svg class="w-4 h-4 text-brand-purple opacity-70" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <nav class="w-full flex flex-col gap-2.5" aria-label="Liens OcciClean">
+
+            <!-- Carte principale : Site web -->
+            <a href="https://occi-clean.fr" target="_blank" rel="noopener" class="link-card-featured group">
+                <div class="absolute top-0 right-0 p-1" aria-hidden="true">
+                    <svg class="w-4 h-4 text-brand-primary opacity-70" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 </div>
-                
-                <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-md bg-white dark:bg-slate-800 border border-brand-purple/20 group-hover:scale-105 transition-transform">
-                    <img src="imgs/prstvision.ico" alt="Icon PRST Vision" class="w-6 h-6 object-contain">
+                <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-brand-primary/20 text-brand-primary group-hover:scale-105 transition-transform">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.721 12.752a9.711 9.711 0 0 0-.945-5.003 12.754 12.754 0 0 1-4.339 2.708 18.991 18.991 0 0 1-.214 4.772 17.165 17.165 0 0 0 5.498-2.477ZM14.634 15.55a17.324 17.324 0 0 0 .332-4.647c-.952.227-1.945.347-2.966.347-1.021 0-2.014-.12-2.966-.347a17.515 17.515 0 0 0 .332 4.647 17.385 17.385 0 0 0 5.268 0ZM9.772 17.119a18.963 18.963 0 0 0 4.456 0A17.182 17.182 0 0 1 12 21.724a17.18 17.18 0 0 1-2.228-4.605ZM7.777 15.23a18.87 18.87 0 0 1-.214-4.774 12.753 12.753 0 0 1-4.34-2.708 9.711 9.711 0 0 0-.944 5.004 17.165 17.165 0 0 0 5.498 2.477ZM21.356 14.752a9.765 9.765 0 0 1-7.478 6.817 18.64 18.64 0 0 0 1.988-4.718 18.627 18.627 0 0 0 5.49-2.099ZM2.644 14.752c1.682.971 3.53 1.688 5.49 2.099a18.64 18.64 0 0 0 1.988 4.718 9.765 9.765 0 0 1-7.478-6.817ZM13.878 2.43a9.755 9.755 0 0 1 6.116 3.986 11.267 11.267 0 0 1-3.746 2.504 18.63 18.63 0 0 0-2.37-6.49ZM12 2.276a17.152 17.152 0 0 1 2.805 7.121c-.897.23-1.837.353-2.805.353-.968 0-1.908-.122-2.805-.353A17.151 17.151 0 0 1 12 2.276ZM10.122 2.43a18.629 18.629 0 0 0-2.37 6.49 11.266 11.266 0 0 1-3.746-2.504 9.754 9.754 0 0 1 6.116-3.986Z"/></svg>
                 </div>
                 <div class="flex flex-col">
-                    <span class="font-bold text-sm text-brand-purple dark:text-brand-purple group-hover:text-brand-purple/80 transition-colors">PRST Vision</span>
-                    <span class="text-xs text-slate-600 dark:text-slate-400">Découvrez le projet principal</span>
+                    <span class="font-bold text-sm text-brand-primary">Notre site web</span>
+                    <span class="text-xs text-slate-600 dark:text-slate-400">occi-clean.fr</span>
                 </div>
             </a>
 
-            <a href="https://rotoros.prts-vision.com/" class="flex items-center gap-3 p-2.5 rounded-lg border border-brand-accent dark:border-white/10 bg-white dark:bg-slate-800/80 hover:border-brand-purple dark:hover:border-brand-purple transition-all duration-300 shadow-sm hover:-translate-y-0.5 group backdrop-blur-sm mt-1">
-                <div class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-md bg-slate-50 dark:bg-slate-700/50 group-hover:bg-brand-purple/10 transition-colors">
-                    <img src="imgs/e82-fr.ico" alt="Icon E82" class="w-5 h-5 object-contain">
-                </div>
-                <span class="font-medium text-sm group-hover:text-brand-purple transition-colors">RotorOS - Simulation d'éoliennes Roblox</span>
+            <!-- Email -->
+            <a href="mailto:contact@occi-clean.fr" class="link-card group mt-1">
+                <span class="link-icon">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.5 8.67v8.58a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V8.67l-8.928 5.493a3 3 0 0 1-3.144 0L1.5 8.67Z"/><path d="M22.5 6.908V6.75a3 3 0 0 0-3-3h-15a3 3 0 0 0-3 3v.158l9.714 5.978a1.5 1.5 0 0 0 1.572 0L22.5 6.908Z"/></svg>
+                </span>
+                <span class="link-label">contact@occi-clean.fr</span>
             </a>
 
-            <a href="https://windmap.delta-online.fr/" class="flex items-center gap-3 p-2.5 rounded-lg border border-brand-accent dark:border-white/10 bg-white dark:bg-slate-800/80 hover:border-brand-purple dark:hover:border-brand-purple transition-all duration-300 shadow-sm hover:-translate-y-0.5 group backdrop-blur-sm">
-                <div class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-md bg-slate-50 dark:bg-slate-700/50 group-hover:bg-brand-purple/10 transition-colors">
-                    <img src="imgs/map-wind-turbine.svg" alt="Icon WindMap" class="w-5 h-5 object-contain">
-                </div>
-                <span class="font-medium text-sm group-hover:text-brand-purple transition-colors">WindMap, carte des parcs visités</span>
+            <!-- Facebook -->
+            <a href="https://www.facebook.com/OcciCleanToulouse/" target="_blank" rel="noopener" class="link-card group">
+                <span class="link-icon">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/></svg>
+                </span>
+                <span class="link-label">Facebook</span>
             </a>
 
-            <a href="https://www.roblox.com/fr/games/80367284203323/Zone-Eole-my-universe-by-RealVladilena" class="flex items-center gap-3 p-2.5 rounded-lg border border-brand-accent dark:border-white/10 bg-white dark:bg-slate-800/80 hover:border-brand-purple dark:hover:border-brand-purple transition-all duration-300 shadow-sm hover:-translate-y-0.5 group backdrop-blur-sm">
-                <div class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-md bg-slate-50 dark:bg-slate-700/50 group-hover:bg-brand-purple/10 transition-colors">
-                    <img src="imgs/j48-pictures-zoom.png" alt="Icon Roblox" class="w-5 h-5 object-contain rounded-sm">
-                </div>
-                <span class="font-medium text-sm group-hover:text-brand-purple transition-colors">Mon univers sur Roblox (Map)</span>
+            <!-- Instagram -->
+            <a href="https://www.instagram.com/occiclean_tlse/" target="_blank" rel="noopener" class="link-card group">
+                <span class="link-icon">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0Zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03Zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162ZM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4Zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439Z"/></svg>
+                </span>
+                <span class="link-label">Instagram</span>
             </a>
 
-            <a href="https://www.tiktok.com/@turbine.passion" class="flex items-center gap-3 p-2.5 rounded-lg border border-brand-accent dark:border-white/10 bg-white dark:bg-slate-800/80 hover:border-brand-purple dark:hover:border-brand-purple transition-all duration-300 shadow-sm hover:-translate-y-0.5 group backdrop-blur-sm">
-                <div class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-md bg-slate-50 dark:bg-slate-700/50 group-hover:bg-brand-purple/10 transition-colors">
-                    <img src="imgs/tiktok-link.png" alt="Icon TikTok" class="w-5 h-5 object-contain">
-                </div>
-                <span class="font-medium text-sm group-hover:text-brand-purple transition-colors">Mon TikTok (éolien et autres)</span>
+            <!-- TikTok -->
+            <a href="https://www.tiktok.com/@occiclean_tlse" target="_blank" rel="noopener" class="link-card group">
+                <span class="link-icon">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07Z"/></svg>
+                </span>
+                <span class="link-label">TikTok</span>
             </a>
 
-            <a href="https://www.youtube.com/@realvladilena" class="flex items-center gap-3 p-2.5 rounded-lg border border-brand-accent dark:border-white/10 bg-white dark:bg-slate-800/80 hover:border-brand-purple dark:hover:border-brand-purple transition-all duration-300 shadow-sm hover:-translate-y-0.5 group backdrop-blur-sm">
-                <div class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-md bg-slate-50 dark:bg-slate-700/50 group-hover:bg-brand-purple/10 transition-colors">
-                    <img src="imgs/youtube.png" alt="Icon YouTube" class="w-5 h-5 object-contain">
-                </div>
-                <span class="font-medium text-sm group-hover:text-brand-purple transition-colors">Ma chaîne YouTube</span>
-            </a>
-
-            <a href="https://www.instagram.com/vlad.gova/" class="flex items-center gap-3 p-2.5 rounded-lg border border-brand-accent dark:border-white/10 bg-white dark:bg-slate-800/80 hover:border-brand-purple dark:hover:border-brand-purple transition-all duration-300 shadow-sm hover:-translate-y-0.5 group backdrop-blur-sm">
-                <div class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-md bg-slate-50 dark:bg-slate-700/50 group-hover:bg-brand-purple/10 transition-colors">
-                    <img src="imgs/insta-link.png" alt="Icon Instagram" class="w-5 h-5 object-contain">
-                </div>
-                <span class="font-medium text-sm group-hover:text-brand-purple transition-colors">Mon Instagram</span>
-            </a>
-
-        </div>
+        </nav>
     </main>
 
     <!-- Pied de page -->
     <footer class="border-t border-brand-accent dark:border-white/10 bg-white dark:bg-slate-900/50 py-4 mt-auto z-10 transition-colors duration-300 backdrop-blur-md">
         <div class="max-w-3xl mx-auto px-6 text-center text-xs text-slate-500 dark:text-slate-400">
             <p class="font-mono-custom flex items-center justify-center gap-1.5">
-                <span class="text-brand-purple">&lt;/&gt;</span> RealVladilena - Tous droits réservés, 2026
+                <span class="text-brand-primary">&lt;/&gt;</span> OcciClean - Tous droits réservés, 2026
             </p>
         </div>
     </footer>
 
-    <!-- Script pour le fonctionnement du Mode Sombre -->
+    <!-- Script du Mode Sombre -->
     <script>
-        const darkIcon = document.getElementById('theme-toggle-dark-icon');
-        const lightIcon = document.getElementById('theme-toggle-light-icon');
-        const themeToggleBtn = document.getElementById('theme-toggle');
+        (function () {
+            const root = document.documentElement;
+            const darkIcon = document.getElementById('theme-toggle-dark-icon');
+            const lightIcon = document.getElementById('theme-toggle-light-icon');
+            const toggleBtn = document.getElementById('theme-toggle');
 
-        if (localStorage.theme === 'dark') {
-            document.documentElement.classList.add('dark');
-            lightIcon.classList.remove('hidden');
-        } else {
-            document.documentElement.classList.remove('dark');
-            darkIcon.classList.remove('hidden');
-        }
+            const applyTheme = (isDark) => {
+                root.classList.toggle('dark', isDark);
+                darkIcon.classList.toggle('hidden', isDark);
+                lightIcon.classList.toggle('hidden', !isDark);
+            };
 
-        themeToggleBtn.addEventListener('click', function() {
-            darkIcon.classList.toggle('hidden');
-            lightIcon.classList.toggle('hidden');
+            applyTheme(localStorage.theme === 'dark');
 
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                localStorage.theme = 'light';
-            } else {
-                document.documentElement.classList.add('dark');
-                localStorage.theme = 'dark';
-            }
-        });
+            toggleBtn.addEventListener('click', () => {
+                const isDark = !root.classList.contains('dark');
+                localStorage.theme = isDark ? 'dark' : 'light';
+                applyTheme(isDark);
+            });
+        })();
     </script>
 </body>
 </html>
