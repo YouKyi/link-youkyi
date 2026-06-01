@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page introuvable | OcciClean</title>
+    <meta name="theme-color" content="#0f6cf4">
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body, html {
+            height: 100%;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .container {
+            /* Dégradé de marque (remplace une image de fond de 2,5 Mo) */
+            background: radial-gradient(circle at 30% 20%, #04dafe 0%, #0f6cf4 45%, #0b1220 100%);
+            min-height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .content { max-width: 600px; width: 100%; }
+
+        .content h1 {
+            font-size: 150px;
+            color: #fff;
+            line-height: 1;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .content p {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.92);
+            margin-bottom: 10px;
+        }
+
+        .btn-home {
+            display: inline-block;
+            margin-top: 18px;
+            padding: 12px 24px;
+            font-size: 16px;
+            color: #0f6cf4;
+            background-color: #fff;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-home:hover { transform: scale(1.05); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28); }
+        .btn-home:active { transform: scale(0.98); }
+
+        @media (max-width: 768px) {
+            .content h1 { font-size: 100px; }
+            .content p { font-size: 16px; }
+        }
+
+        @media (max-width: 480px) {
+            .content h1 { font-size: 70px; }
+            .content p { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <h1>404</h1>
+            <p>Page introuvable</p>
+            <p>Nous sommes désolés, la page que vous recherchez est indisponible ou introuvable.</p>
+            <a href="https://occi-clean.fr" class="btn-home">Revenir à l'accueil</a>
+        </div>
+    </div>
+</body>
+</html>
