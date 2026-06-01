@@ -57,3 +57,8 @@ Ouvrir `index.html` dans le navigateur, ou `python -m http.server 8000` puis htt
 - Toujours en **français**, orthographe et accents corrects.
 - Jamais de tirets cadratins (em-dash U+2014) : virgules, deux-points, parenthèses ou phrases séparées.
 - Le dark mode est piloté par la classe `dark` sur `<html>` (script inline en bas d'`index.html`, persistance via `localStorage.theme`). Toute couleur doit avoir sa variante `dark:`.
+
+## Git
+
+- **Ne jamais** ajouter de ligne `Co-Authored-By` (ni aucune mention d'auteur ajouté) dans les messages de commit. Les commits doivent rester au seul nom de l'utilisateur.
+- Messages de commit en français, format conventionnel (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`), sans em-dash.
