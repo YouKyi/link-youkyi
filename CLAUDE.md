@@ -58,6 +58,10 @@ Ouvrir `index.html` dans le navigateur, ou `python -m http.server 8000` puis htt
 - Jamais de tirets cadratins (em-dash U+2014) : virgules, deux-points, parenthèses ou phrases séparées.
 - Le dark mode est piloté par la classe `dark` sur `<html>` (script inline en bas d'`index.html`, persistance via `localStorage.theme`). Toute couleur doit avoir sa variante `dark:`.
 
+## Analytics Vercel
+
+Speed Insights + Web Analytics sont intégrés via des **balises `<script>`** dans `index.html` et `404.html` (méthode HTML pure de Vercel), pas via le package npm `@vercel/*` : il n'y a pas de bundler pour `import` un module ici. Les scripts sont servis automatiquement par Vercel depuis `/_vercel/speed-insights/script.js` et `/_vercel/insights/script.js` une fois les fonctionnalités activées dans le dashboard. Ne pas tenter d'installer `@vercel/speed-insights` ou `@vercel/analytics`. Les métriques n'apparaissent qu'après déploiement sur Vercel (pas en local).
+
 ## Git
 
 - **Ne jamais** ajouter de ligne `Co-Authored-By` (ni aucune mention d'auteur ajouté) dans les messages de commit. Les commits doivent rester au seul nom de l'utilisateur.
