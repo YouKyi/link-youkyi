@@ -1,20 +1,30 @@
 <!DOCTYPE html>
-<html lang="{{LANG}}">
+<html lang="{{LANG}}" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Page introuvable | {{TITLE}}</title>
+    <title>404 · {{TITLE}}</title>
     <meta name="theme-color" content="{{THEME_COLOR}}">
     <link rel="icon" href="{{AVATAR}}">
-    <!-- Styles servis depuis la feuille compilée (classes .error-*), pas d'inline : CSP stricte conservée. -->
+    <!-- Styles servis depuis la feuille compilée (.error-*), pas d'inline : CSP stricte conservée. -->
     <link rel="stylesheet" href="/assets/tailwind.css">
 </head>
 <body class="error-page">
     <div class="error-card">
+        <span class="error-badge">HTTP 404 · node offline</span>
         <p class="error-code">404</p>
-        <p class="error-title">Page introuvable</p>
-        <p class="error-text">Nous sommes désolés, la page que vous recherchez est indisponible ou introuvable.</p>
-        <a href="{{OG_URL}}" class="error-btn">Revenir à l'accueil</a>
+        <p class="error-title">Baie introuvable</p>
+        <p class="error-text">Cette ressource a quitté le rack, ou n'a jamais été montée. Un paquet s'est sûrement perdu quelque part entre deux switchs.</p>
+        <pre class="error-term"><span class="err-prompt">youkyi@dc1:~$</span> locate <span class="err-path">cette-page</span>
+<span class="err-out">→ ERR_RACK_NOT_FOUND · code 0x1A4 · 0 résultat</span></pre>
+        <a href="{{OG_URL}}" class="error-btn">↩ Retour à la baie principale</a>
+        <p class="error-egg">// encore là, curieux ? écris-moi : <a href="mailto:easter-egg@youkyi.net">easter-egg@youkyi.net</a></p>
     </div>
+
+    <!-- Easter egg console -->
+    <script>
+        console.log("%c404 · ERR_RACK_NOT_FOUND", "color:#bf00ff; font-weight:bold; font-size:16px; text-shadow:0 0 10px #bf00ff;");
+        console.log("%cPerdu dans les baies ? Un easter egg t'attend : easter-egg@youkyi.net", "color:#22d3ee; font-size:13px;");
+    </script>
 </body>
 </html>

@@ -60,21 +60,47 @@ header p { color: rgba(255, 255, 255, 0.82); text-shadow: 0 1px 10px rgba(0, 0, 
 footer { background: rgba(8, 10, 16, 0.35); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 footer p, footer span { color: rgba(255, 255, 255, 0.72); }
 
-/* ---- Page 404 : styles autonomes (CSP stricte conservée) ---- */
+/* ---- Page 404 : custom, ambiance datacenter / terminal (CSP stricte conservée) ---- */
 .error-page {
   margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  text-align: center; padding: 20px; font-family: Arial, Helvetica, sans-serif;
-  background: radial-gradient(circle at 30% 20%, #818cf8 0%, #4f46e5 45%, #0a0a0a 100%);
+  text-align: center; padding: 24px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  color: #e8e8ee;
+  background:
+    radial-gradient(800px 520px at 50% 0%, rgba(79, 70, 229, 0.20), transparent 70%),
+    radial-gradient(700px 520px at 50% 100%, rgba(34, 211, 238, 0.12), transparent 70%),
+    #04060a;
 }
-.error-card { max-width: 600px; width: 100%; }
-.error-code { font-size: 150px; line-height: 1; color: #fff; margin: 0 0 20px; text-shadow: 0 4px 20px rgba(0, 0, 0, 0.25); }
-.error-title, .error-text { font-size: 18px; color: rgba(255, 255, 255, 0.92); margin: 0 0 10px; }
+.error-card { max-width: 560px; width: 100%; }
+.error-badge {
+  display: inline-block; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700;
+  color: #bf00ff; border: 1px solid rgba(191, 0, 255, 0.45); border-radius: 999px;
+  padding: 4px 12px; margin-bottom: 18px; background: rgba(191, 0, 255, 0.08);
+}
+.error-code {
+  font-size: clamp(90px, 22vw, 168px); line-height: 1; margin: 0; font-weight: 800; letter-spacing: -0.02em;
+  background: linear-gradient(180deg, #ffffff, #a78bfa 55%, #6d28d9);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 0 48px rgba(167, 139, 250, 0.35);
+}
+.error-title { font-size: 20px; color: #fff; margin: 6px 0; font-weight: 700; }
+.error-text { font-size: 14px; line-height: 1.55; color: rgba(255, 255, 255, 0.62); margin: 0 auto 22px; max-width: 420px; }
+.error-term {
+  text-align: left; font-size: 12.5px; line-height: 1.6; margin: 0 auto 24px; max-width: 440px;
+  background: rgba(12, 14, 22, 0.6); border: 1px solid rgba(255, 255, 255, 0.10); border-radius: 12px;
+  padding: 14px 16px; overflow-x: auto; color: rgba(255, 255, 255, 0.85); white-space: pre-wrap; word-break: break-word;
+}
+.error-term .err-prompt { color: #22d3ee; }
+.error-term .err-path { color: #fff; }
+.error-term .err-out { color: #ff6b6b; }
 .error-btn {
-  display: inline-block; margin-top: 18px; padding: 12px 24px; font-size: 16px; font-weight: 600;
-  color: #4f46e5; background: #fff; text-decoration: none; border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: inline-block; padding: 12px 24px; font-size: 14px; font-weight: 600; color: #fff;
+  background: rgba(191, 0, 255, 0.18); border: 1px solid rgba(191, 0, 255, 0.5);
+  text-decoration: none; border-radius: 10px; transition: transform 0.2s ease, background 0.2s ease;
 }
-.error-btn:hover { transform: scale(1.05); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28); }
+.error-btn:hover { transform: translateY(-2px); background: rgba(191, 0, 255, 0.30); }
 .error-btn:active { transform: scale(0.98); }
-@media (max-width: 768px) { .error-code { font-size: 100px; } .error-title, .error-text { font-size: 16px; } }
-@media (max-width: 480px) { .error-code { font-size: 70px; } .error-title, .error-text { font-size: 14px; } }
+.error-egg { margin-top: 22px; font-size: 12px; color: rgba(255, 255, 255, 0.42); }
+.error-egg a { color: #bf00ff; text-decoration: none; }
+.error-egg a:hover { text-decoration: underline; }
+@media (max-width: 480px) { .error-text, .error-term { font-size: 12px; } }
