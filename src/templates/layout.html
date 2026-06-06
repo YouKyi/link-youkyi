@@ -71,9 +71,12 @@
                 ""
             ].join("\n");
             var flashy = "color:#bf00ff; text-shadow:0 0 10px #bf00ff;";
+            var fr = (navigator.language || '').toLowerCase().indexOf('fr') === 0;
+            var tagline = fr ? "Administrateur système, réseaux & Cloud" : "Sysadmin · networks & Cloud";
+            var invite = fr ? "Tu fouilles dans la console ? J'aime les curieux. Écris-moi : " : "Poking around the console? I like the curious ones. Drop me a line: ";
             console.log("%c" + art, flashy + " font-family:monospace; font-size:12px; line-height:1.05;");
-            console.log("%cAdministrateur système, réseaux & Cloud", "color:#bf00ff; font-weight:bold; font-size:13px;");
-            console.log("%cTu fouilles dans la console ? J'aime les curieux. Écris-moi : %ceaster-egg@youkyi.net", "color:#e8e8ee; font-size:13px;", "color:#bf00ff; font-weight:bold; text-decoration:underline;");
+            console.log("%c" + tagline, "color:#bf00ff; font-weight:bold; font-size:13px;");
+            console.log("%c" + invite + "%ceaster-egg@youkyi.net", "color:#e8e8ee; font-size:13px;", "color:#bf00ff; font-weight:bold; text-decoration:underline;");
         })();
     </script>
 </body>
