@@ -60,9 +60,9 @@ Deux projets Vercel important ce dépôt, tous deux avec **Root Directory = raci
 
 `vercel.json` (partagé) fournit `cleanUrls` et les en-têtes de sécurité (CSP, HSTS, X-Frame-Options). La CSP autorise les modules/importmap en `'self'` ; Three.js n'utilise pas `eval`, donc pas besoin de `'unsafe-eval'`.
 
-## Analytics Vercel
+## Analytics
 
-Speed Insights + Web Analytics via balises `<script>` dans les templates (méthode HTML pure), servis depuis `/_vercel/…`. Pas de package npm `@vercel/*`. Métriques visibles après déploiement.
+Aucun analytics pour l'instant : les scripts Vercel (Speed Insights / Web Analytics) ont été retirés. Un outil d'analytics propre pourra être ajouté plus tard.
 
 ## Conventions
 

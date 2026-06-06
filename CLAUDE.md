@@ -77,7 +77,7 @@ Deux projets, **Root Directory = racine**, **Build Command = `npm run build`**. 
 - Toujours en **français**, orthographe et accents corrects.
 - Jamais de tiret cadratin (em-dash U+2014) : virgules, deux-points, parenthèses ou phrases séparées.
 - **Thème sombre unique** : `<html class="dark">` forcé, plus de bascule ni de détection clair/sombre.
-- Analytics Vercel via balises `<script>` (pas le package npm `@vercel/*`).
+- Pas d'analytics pour l'instant : les scripts Vercel (Speed Insights / Web Analytics) ont été retirés. Analytics maison plus tard.
 
 ## Git
 
