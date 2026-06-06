@@ -34,7 +34,10 @@ try {
 }
 
 if (renderer) {
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  // Plafonne la résolution de rendu à ~1080p (le canvas est upscalé en CSS) : gros gain GPU en 1440p/4K, look quasi identique.
+  const MAX_W = 1920, MAX_H = 1080;
+  const pixRatio = () => Math.min(1.5, MAX_W / window.innerWidth, MAX_H / window.innerHeight, window.devicePixelRatio || 1);
+  renderer.setPixelRatio(pixRatio());
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
 
@@ -49,7 +52,7 @@ if (renderer) {
 
   const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
   const composer = new EffectComposer(renderer, rt);
-  composer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  composer.setPixelRatio(pixRatio());
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.9, 0.7, 0.0);
   composer.addPass(bloom);
@@ -182,7 +185,7 @@ if (renderer) {
   });
 
   function buildStatics(){
-    const dprF = Math.min(2, window.devicePixelRatio || 1);
+    const dprF = pixRatio();
     for(let side=-1; side<=1; side+=2){
       const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.18,ROWS*SPACING), new THREE.MeshStandardMaterial({ color:0x0a0b10, roughness:0.8, metalness:0.6 }));
       rail.position.set(side*1.5, RACK_H+0.45, Z0-ROWS*SPACING/2); worldGroup.add(rail);
@@ -269,18 +272,23 @@ if (renderer) {
   }
 
   const t0 = performance.now();
+  const FRAME_MS = 1000 / 30;   // ~30 fps : ~5x moins de charge GPU, invisible sur un fond lent
+  let raf = 0, last = 0;
   function animate(now){
-    const dt = Math.min(0.05, (now-(animate._p||now))/1000); animate._p=now;
+    if (document.hidden) { raf = 0; return; }   // 0 GPU quand l'onglet est caché
+    raf = requestAnimationFrame(animate);
+    if (now - last < FRAME_MS) return;           // throttle ~30 fps
+    const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016); last = now;
     const time = (now-t0)/1000;
     ledMat.uniforms.uTime.value = time;
     for(const u of units){ u.position.z += config.camSpeed*dt; if(u.position.z > NEAR_WRAP) u.position.z -= TUNNEL; }
     camera.position.set(Math.sin(time*0.12)*0.10, 1.5+Math.sin(time*0.1)*0.04, Z_CAM);
     camera.lookAt(Math.sin(time*0.05)*0.15, 0.55, Z_CAM-12);
     composer.render();
-    requestAnimationFrame(animate);
   }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(animate); } });
   function resize(){
-    const W=window.innerWidth, H=window.innerHeight, dpr=Math.min(2, window.devicePixelRatio||1);
+    const W=window.innerWidth, H=window.innerHeight, dpr=pixRatio();
     renderer.setPixelRatio(dpr); renderer.setSize(W,H);
     composer.setPixelRatio(dpr); composer.setSize(W,H); bloom.setSize(W,H);
     camera.aspect = W/H; camera.updateProjectionMatrix();
@@ -335,7 +343,7 @@ if (renderer) {
   buildStatics(); buildRacks(); buildLEDs();
   resize(); applyLive();
   if(window.DC_PANEL) buildPanel();
-  requestAnimationFrame(animate);
+  raf = requestAnimationFrame(animate);
 
   window.DC = { DEFAULTS, config, PALETTES, applyLive, buildLEDs, regen(){ seed=Math.floor(Math.random()*1e9); buildLEDs(); } };
 }
