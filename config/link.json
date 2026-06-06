@@ -1,0 +1,26 @@
+{
+  "variant": "link",
+  "lang": "fr",
+  "title": "Youkyi",
+  "name": "Youkyi",
+  "bio": "Administrateur système, réseaux & Cloud.",
+  "description": "Alexandre \"YouKyi\" AGASSEAU. Administrateur système, réseaux & Cloud.",
+  "avatar": "/assets/logo-youkyi.png",
+  "avatarAlt": "Logo YouKyi",
+  "avatarShape": "rounded",
+  "theme": "dark",
+  "themeColor": "#04060a",
+  "footer": "Create more value than you capture",
+  "ogUrl": "https://youkyi.fr",
+  "ogImage": "/assets/logo-youkyi.png",
+  "links": [
+    { "network": "mail", "featured": true, "label": "Mail MOI !", "url": "mailto:contact@youkyi.fr", "subtitle": "contact@youkyi.fr" },
+    { "network": "linkedin", "url": "https://www.linkedin.com/in/alexandreagasseau/" },
+    { "network": "instagram", "url": "https://www.instagram.com/youkyi/" },
+    { "network": "threads", "url": "https://www.threads.net/@youkyi" },
+    { "network": "twitter", "url": "https://x.com/RC_YouKyi" },
+    { "network": "youtube", "url": "https://www.youtube.com/@YouKyi" },
+    { "network": "facebook", "url": "https://www.facebook.com/YouKyii" },
+    { "network": "github", "url": "https://www.github.com/YouKyi" }
+  ]
+}

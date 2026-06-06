@@ -1,0 +1,22 @@
+{
+  "variant": "pro",
+  "lang": "fr",
+  "title": "AGASSEAU Alexandre",
+  "name": "Alexandre Agasseau",
+  "bio": "Administrateur système, réseaux & Cloud.",
+  "description": "Alexandre \"YouKyi\" AGASSEAU. Administrateur système, réseaux & Cloud.",
+  "avatar": "/assets/alexandre.jpg",
+  "avatarAlt": "Photo d'Alexandre Agasseau",
+  "avatarShape": "circle",
+  "theme": "dark",
+  "themeColor": "#04060a",
+  "footer": "Create more value than you capture",
+  "ogUrl": "https://pro.youkyi.fr",
+  "ogImage": "/assets/alexandre.jpg",
+  "links": [
+    { "network": "mail", "featured": true, "label": "Mail MOI !", "url": "mailto:contact@youkyi.fr", "subtitle": "contact@youkyi.fr" },
+    { "network": "linkedin", "url": "https://www.linkedin.com/in/alexandreagasseau/" },
+    { "network": "twitter", "url": "https://x.com/RC_YouKyi" },
+    { "network": "github", "url": "https://www.github.com/YouKyi" }
+  ]
+}
