@@ -57,5 +57,24 @@
     <script>window.DC_CONFIG = {{DC_CONFIG}};</script>
     <script type="importmap">{"imports":{"three":"/assets/vendor/three/three.module.js","three/addons/":"/assets/vendor/three/addons/"}}</script>
     <script type="module" src="/assets/vendor/datacenter.js"></script>
+
+    <!-- Easter egg console (coucou les curieux du DevTools) -->
+    <script>
+        (function () {
+            var art = [
+                "",
+                "  █    █  ██████  ██  ██  ██  ██  █    █  ██████",
+                "   █  █   ██  ██  ██  ██  ██ ██    █  █     ██   ",
+                "    ██    ██  ██  ██  ██  ████      ██      ██   ",
+                "    ██    ██  ██  ██  ██  ██ ██    ██       ██   ",
+                "    ██    ██████  ██████  ██  ██   ██     ██████",
+                ""
+            ].join("\n");
+            var flashy = "color:#bf00ff; text-shadow:0 0 10px #bf00ff;";
+            console.log("%c" + art, flashy + " font-family:monospace; font-size:12px; line-height:1.05;");
+            console.log("%cAdministrateur système, réseaux & Cloud", "color:#bf00ff; font-weight:bold; font-size:13px;");
+            console.log("%cTu fouilles dans la console ? J'aime les curieux. Écris-moi : %ceaster-egg@youkyi.net", "color:#e8e8ee; font-size:13px;", "color:#bf00ff; font-weight:bold; text-decoration:underline;");
+        })();
+    </script>
 </body>
 </html>
