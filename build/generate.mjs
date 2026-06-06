@@ -32,8 +32,6 @@ const escapeHtml = (s) =>
 const isExternal = (url) => /^https?:/i.test(url);
 const externalAttrs = (url) => (isExternal(url) ? ' target="_blank" rel="noopener"' : '');
 
-const STAR = '<svg class="w-4 h-4 text-brand-primary opacity-70" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
-
 function renderLink(link) {
   const net = networks[link.network];
   if (!net) throw new Error(`Réseau inconnu dans la config : "${link.network}"`);
@@ -45,7 +43,6 @@ function renderLink(link) {
   if (link.featured) {
     const subtitle = link.subtitle || url.replace(/^mailto:/i, '');
     return `            <a href="${escapeHtml(url)}"${attrs} class="link-card-featured group">
-                <div class="absolute top-0 right-0 p-1" aria-hidden="true">${STAR}</div>
                 <span class="${iconClass}">${net.svg}</span>
                 <span class="flex flex-col">
                     <span class="font-bold text-sm text-brand-primary">${escapeHtml(label)}</span>

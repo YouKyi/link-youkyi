@@ -14,8 +14,6 @@
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.10);
   }
   .link-card:hover { background: rgba(22, 26, 38, 0.58); border-color: rgba(255, 255, 255, 0.20); transform: translateY(-2px); }
-  /* chevron à droite des cartes standard */
-  .link-card::after { content: '\203A'; margin-left: auto; color: rgba(255, 255, 255, 0.42); font-size: 20px; line-height: 1; flex: 0 0 auto; }
 
   /* carte mise en avant (Mail) : bordure violette + étoile (dans le HTML) */
   .link-card-featured {
