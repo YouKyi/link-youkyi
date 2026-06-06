@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{TITLE}}</title>
+    <meta name="description" content="{{DESCRIPTION}}">
+    <meta name="theme-color" content="{{THEME_COLOR}}">
+
+    <!-- Aperçu lors du partage (Open Graph / Twitter) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{SITE_NAME}}">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:title" content="{{TITLE}}">
+    <meta property="og:description" content="{{DESCRIPTION}}">
+    <meta property="og:url" content="{{OG_URL}}">
+    <meta property="og:image" content="{{OG_IMAGE_ABS}}">
+    <meta property="og:image:alt" content="{{AVATAR_ALT}}">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{TITLE}}">
+    <meta name="twitter:description" content="{{DESCRIPTION}}">
+    <meta name="twitter:image" content="{{OG_IMAGE_ABS}}">
+
+    <link rel="icon" href="{{AVATAR}}">
+    <link rel="stylesheet" href="/assets/tailwind.css">
+</head>
+<body class="bg-brand-darkBg text-slate-200 min-h-screen flex flex-col relative overflow-x-hidden">
+
+    <!-- Fond Datacenter 3D (Three.js auto-hébergé) + voile/vignette pour la lisibilité -->
+    <canvas id="scene-canvas" class="scene-canvas" aria-hidden="true"></canvas>
+    <div id="veil" class="scene-veil" aria-hidden="true"></div>
+    <div class="scene-vignette" aria-hidden="true"></div>
+
+    <!-- Contenu principal -->
+    <main class="flex-grow flex flex-col items-center justify-center w-full max-w-lg mx-auto px-4 py-8 z-10 relative">
+
+        <header class="flex flex-col items-center mb-6 text-center mt-2">
+            <img src="{{AVATAR}}" alt="{{AVATAR_ALT}}" width="112" height="112" class="{{AVATAR_SHAPE_CLASS}}">
+            <h1 class="text-xl font-bold tracking-tight">{{NAME}}</h1>
+            <p class="text-sm mt-1 max-w-xs">{{BIO}}</p>
+        </header>
+
+        <nav class="w-full flex flex-col gap-2.5" aria-label="{{NAV_LABEL}}">
+{{LINKS}}
+        </nav>
+    </main>
+
+    <footer class="border-t border-white/10 py-4 mt-auto z-10">
+        <div class="max-w-3xl mx-auto px-6 text-center text-xs">
+            <p class="font-mono-custom flex items-center justify-center gap-1.5">
+                <span class="text-brand-primary">&lt;/&gt;</span> {{FOOTER}}
+            </p>
+        </div>
+    </footer>
+
+    <!-- Fond animé : config + moteur (importmap local => CSP 'self') -->
+    <script>window.DC_CONFIG = {{DC_CONFIG}};</script>
+    <script type="importmap">{"imports":{"three":"/assets/vendor/three/three.module.js","three/addons/":"/assets/vendor/three/addons/"}}</script>
+    <script type="module" src="/assets/vendor/datacenter.js"></script>
+
+    <!-- Vercel Speed Insights (scripts servis par Vercel, aucune dépendance npm) -->
+    <script>
+        window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
+
+    <!-- Vercel Web Analytics -->
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>

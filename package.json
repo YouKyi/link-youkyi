@@ -1,11 +1,14 @@
 {
-  "name": "link-occiclean",
-  "version": "1.0.0",
+  "name": "link-youkyi",
+  "version": "2.0.0",
   "private": true,
-  "description": "Page de liens (link in bio) d'OcciClean.",
+  "description": "Pages de liens (link in bio) YouKyi : variantes pro et link, générées depuis des configs JSON.",
   "scripts": {
-    "build": "tailwindcss -i ./src/input.css -o ./assets/tailwind.css --minify",
-    "watch": "tailwindcss -i ./src/input.css -o ./assets/tailwind.css --watch"
+    "build:gen": "node build/generate.mjs",
+    "build:css": "tailwindcss -i ./src/input.css -o ./assets/tailwind.css --minify",
+    "build": "node build/generate.mjs && tailwindcss -i ./src/input.css -o ./assets/tailwind.css --minify && node build/generate.mjs --copy-css",
+    "watch": "tailwindcss -i ./src/input.css -o ./assets/tailwind.css --watch",
+    "dev": "npm run build && npx --yes serve apps/link"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17"

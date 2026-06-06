@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page introuvable | {{TITLE}}</title>
+    <meta name="theme-color" content="{{THEME_COLOR}}">
+    <link rel="icon" href="{{AVATAR}}">
+    <!-- Styles servis depuis la feuille compilée (classes .error-*), pas d'inline : CSP stricte conservée. -->
+    <link rel="stylesheet" href="/assets/tailwind.css">
+</head>
+<body class="error-page">
+    <div class="error-card">
+        <p class="error-code">404</p>
+        <p class="error-title">Page introuvable</p>
+        <p class="error-text">Nous sommes désolés, la page que vous recherchez est indisponible ou introuvable.</p>
+        <a href="{{OG_URL}}" class="error-btn">Revenir à l'accueil</a>
+    </div>
+
+    <!-- Vercel Speed Insights (scripts servis par Vercel, aucune dépendance npm) -->
+    <script>
+        window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
+
+    <!-- Vercel Web Analytics -->
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>

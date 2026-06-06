@@ -3,3 +3,7 @@ tools/
 .vercel
 .DS_Store
 *.log
+
+# Sorties générées par le build (régénérées par `npm run build` et sur Vercel)
+apps/
+assets/tailwind.css

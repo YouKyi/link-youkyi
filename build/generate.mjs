@@ -1,0 +1,131 @@
+// Générateur statique des variantes YouKyi (pro + link).
+//
+// Lit `config/<variant>.json` + `src/templates/*.html` + `data/networks.mjs`
+// et écrit `apps/<variant>/{index.html, 404.html}` + copie les assets
+// (avatar local + tailwind.css compilé) dans `apps/<variant>/assets/`.
+//
+// Zéro dépendance : pur Node (ESM). Exécuté depuis la racine du dépôt.
+//   node build/generate.mjs             -> génère le HTML + copie les avatars (+ le CSS s'il existe)
+//   node build/generate.mjs --copy-css  -> copie uniquement les assets (CSS + avatars) dans les apps
+
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, cpSync, existsSync } from 'node:fs';
+import { join, basename } from 'node:path';
+import { networks } from '../data/networks.mjs';
+
+const root = process.cwd();
+const VARIANTS = ['link', 'pro'];
+const copyCssOnly = process.argv.includes('--copy-css');
+
+// Réglages validés du fond Datacenter 3D (surchargés par cfg.dc si présent dans une config).
+const FROZEN_DC = { camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045, glow: 1.20, fog: 0.025, veil: 0.32, palette: 'datacenter', bg: '#04060a' };
+
+const layoutTpl = readFileSync(join(root, 'src/templates/layout.html'), 'utf8');
+const errorTpl = readFileSync(join(root, 'src/templates/error.html'), 'utf8');
+
+const escapeHtml = (s) =>
+  String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+const isExternal = (url) => /^https?:/i.test(url);
+const externalAttrs = (url) => (isExternal(url) ? ' target="_blank" rel="noopener"' : '');
+
+const STAR = '<svg class="w-4 h-4 text-brand-primary opacity-70" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+
+function renderLink(link) {
+  const net = networks[link.network];
+  if (!net) throw new Error(`Réseau inconnu dans la config : "${link.network}"`);
+  const label = link.label || net.label;
+  const url = link.url;
+  const attrs = externalAttrs(url);
+  const iconClass = `link-icon is-${link.network}`;
+
+  if (link.featured) {
+    const subtitle = link.subtitle || url.replace(/^mailto:/i, '');
+    return `            <a href="${escapeHtml(url)}"${attrs} class="link-card-featured group">
+                <div class="absolute top-0 right-0 p-1" aria-hidden="true">${STAR}</div>
+                <span class="${iconClass}">${net.svg}</span>
+                <span class="flex flex-col">
+                    <span class="font-bold text-sm text-brand-primary">${escapeHtml(label)}</span>
+                    <span class="text-xs text-slate-600 dark:text-slate-400">${escapeHtml(subtitle)}</span>
+                </span>
+            </a>`;
+  }
+
+  const labelBlock = link.subtitle
+    ? `<span class="flex flex-col">
+                    <span class="link-label">${escapeHtml(label)}</span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(link.subtitle)}</span>
+                </span>`
+    : `<span class="link-label">${escapeHtml(label)}</span>`;
+
+  return `            <a href="${escapeHtml(url)}"${attrs} class="link-card group">
+                <span class="${iconClass}">${net.svg}</span>
+                ${labelBlock}
+            </a>`;
+}
+
+function buildMap(cfg) {
+  const ogImageAbs = cfg.ogImage ? cfg.ogUrl.replace(/\/$/, '') + cfg.ogImage : '';
+  return {
+    LANG: cfg.lang || 'fr',
+    TITLE: escapeHtml(cfg.title),
+    DESCRIPTION: escapeHtml(cfg.description || cfg.bio || ''),
+    SITE_NAME: escapeHtml(cfg.siteName || 'YouKyi'),
+    THEME_COLOR: cfg.themeColor || '#0a0a0a',
+    OG_URL: cfg.ogUrl,
+    OG_IMAGE_ABS: ogImageAbs,
+    AVATAR: cfg.avatar,
+    AVATAR_ALT: escapeHtml(cfg.avatarAlt || cfg.name),
+    AVATAR_SHAPE_CLASS: cfg.avatarShape === 'circle' ? 'avatar avatar--circle' : 'avatar avatar--rounded',
+    NAME: escapeHtml(cfg.name),
+    BIO: escapeHtml(cfg.bio || ''),
+    FOOTER: escapeHtml(cfg.footer || ''),
+    NAV_LABEL: escapeHtml(`Liens ${cfg.name}`),
+    DC_CONFIG: JSON.stringify(cfg.dc || FROZEN_DC),
+    LINKS: cfg.links.map(renderLink).join('\n'),
+  };
+}
+
+const fill = (tpl, map) => tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => (k in map ? map[k] : ''));
+
+function copyAssets(cfg, assetsDir) {
+  mkdirSync(assetsDir, { recursive: true });
+  // Avatar local
+  if (cfg.avatar && cfg.avatar.startsWith('/assets/')) {
+    const file = basename(cfg.avatar);
+    const src = join(root, 'assets', file);
+    if (existsSync(src)) copyFileSync(src, join(assetsDir, file));
+  }
+  // CSS compilé (présent seulement après le build Tailwind)
+  const css = join(root, 'assets', 'tailwind.css');
+  if (existsSync(css)) copyFileSync(css, join(assetsDir, 'tailwind.css'));
+  // Three.js auto-hébergé + moteur du fond (assets/vendor -> apps/<v>/assets/vendor)
+  const vendorSrc = join(root, 'assets', 'vendor');
+  if (existsSync(vendorSrc)) cpSync(vendorSrc, join(assetsDir, 'vendor'), { recursive: true });
+}
+
+function loadConfig(name) {
+  return JSON.parse(readFileSync(join(root, 'config', `${name}.json`), 'utf8'));
+}
+
+for (const name of VARIANTS) {
+  const cfg = loadConfig(name);
+  const outDir = join(root, 'apps', cfg.variant || name);
+  const assetsDir = join(outDir, 'assets');
+
+  if (copyCssOnly) {
+    copyAssets(cfg, assetsDir);
+    continue;
+  }
+
+  const map = buildMap(cfg);
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(join(outDir, 'index.html'), fill(layoutTpl, map));
+  writeFileSync(join(outDir, '404.html'), fill(errorTpl, map));
+  copyAssets(cfg, assetsDir);
+}
+
+console.log(copyCssOnly ? 'Assets copiés dans apps/*.' : `Apps générées : ${VARIANTS.join(', ')}.`);

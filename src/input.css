@@ -3,33 +3,80 @@
 @tailwind utilities;
 
 @layer components {
+  /* ---- Cartes "verre" (glassmorphism), posées sur le fond Datacenter 3D ---- */
   .link-card {
-    @apply flex items-center gap-3 p-2.5 rounded-xl border border-brand-accent dark:border-white/10
-           bg-white dark:bg-slate-800/80 hover:border-brand-primary dark:hover:border-brand-light
-           transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 backdrop-blur-sm;
+    @apply flex items-center rounded-2xl transition-all duration-300;
+    padding: 15px 20px; gap: 0.875rem;
+    background: rgba(12, 14, 22, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.10);
   }
+  .link-card:hover { background: rgba(22, 26, 38, 0.58); border-color: rgba(255, 255, 255, 0.20); transform: translateY(-2px); }
+  /* chevron à droite des cartes standard */
+  .link-card::after { content: '\203A'; margin-left: auto; color: rgba(255, 255, 255, 0.42); font-size: 20px; line-height: 1; flex: 0 0 auto; }
+
+  /* carte mise en avant (Mail) : bordure violette + étoile (dans le HTML) */
   .link-card-featured {
-    @apply relative overflow-hidden flex items-center gap-3 py-3 px-2.5 rounded-xl border-2
-           border-brand-primary/40 dark:border-brand-light/50 bg-brand-primary/5 dark:bg-brand-light/10
-           hover:border-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-light/20
-           transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 backdrop-blur-sm;
+    @apply relative flex items-center rounded-2xl transition-all duration-300 overflow-hidden;
+    padding: 15px 20px; gap: 0.875rem;
+    background: rgba(12, 14, 22, 0.45);
+    border: 1px solid rgba(129, 140, 248, 0.45);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.10);
   }
+  .link-card-featured:hover { background: rgba(22, 26, 38, 0.58); border-color: rgba(129, 140, 248, 0.62); transform: translateY(-2px); }
+
+  /* boîte d'icône en verre (les icônes de marque gardent leur couleur via .is-* svg) */
   .link-icon {
-    @apply w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-700/50
-           text-slate-600 dark:text-slate-300 group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors;
+    @apply w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg transition-colors;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.05));
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.92);
   }
-  .link-label {
-    @apply font-medium text-sm group-hover:text-brand-primary transition-colors;
-  }
+  .link-label { @apply font-medium text-sm; color: #fff; }
+
+  /* couleur de marque par réseau (icône) ; monochromes (X, GitHub, Threads) -> blanc */
+  .is-linkedin svg  { color: #0A66C2; }
+  .is-instagram svg { color: #E4405F; }
+  .is-youtube svg   { color: #FF0000; }
+  .is-facebook svg  { color: #1877F2; }
+
+  /* avatar du profil */
+  .avatar { @apply w-28 h-28 mb-3; }
+  .avatar--circle { @apply rounded-full object-cover; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45); border: 2px solid rgba(255, 255, 255, 0.15); }
+  .avatar--rounded { @apply rounded-2xl object-contain; }
 }
 
-/* Décor de fond (grille subtile) : CSS simple, hors @layer */
-.bg-grid-pattern {
-  background-image: linear-gradient(to right, rgba(4, 218, 254, 0.10) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(4, 218, 254, 0.10) 1px, transparent 1px);
-  background-size: 40px 40px;
+/* ---- Fond Datacenter 3D : couches plein écran (CSS, pas de style inline -> CSP) ---- */
+.scene-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 0; display: block; }
+.scene-veil { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+.scene-vignette { position: fixed; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(120% 100% at 50% 42%, rgba(0,0,0,0) 52%, rgba(0,0,0,0.45) 82%, rgba(0,0,0,0.8) 100%); }
+
+/* ---- Lisibilité en-tête / pied par-dessus la scène ---- */
+header h1 { color: #fff; text-shadow: 0 2px 16px rgba(0, 0, 0, 0.7); }
+header p { color: rgba(255, 255, 255, 0.82); text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7); }
+footer { background: rgba(8, 10, 16, 0.35); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+footer p, footer span { color: rgba(255, 255, 255, 0.72); }
+
+/* ---- Page 404 : styles autonomes (CSP stricte conservée) ---- */
+.error-page {
+  margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 20px; font-family: Arial, Helvetica, sans-serif;
+  background: radial-gradient(circle at 30% 20%, #818cf8 0%, #4f46e5 45%, #0a0a0a 100%);
 }
-.dark .bg-grid-pattern {
-  background-image: linear-gradient(to right, rgba(4, 218, 254, 0.05) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(4, 218, 254, 0.05) 1px, transparent 1px);
+.error-card { max-width: 600px; width: 100%; }
+.error-code { font-size: 150px; line-height: 1; color: #fff; margin: 0 0 20px; text-shadow: 0 4px 20px rgba(0, 0, 0, 0.25); }
+.error-title, .error-text { font-size: 18px; color: rgba(255, 255, 255, 0.92); margin: 0 0 10px; }
+.error-btn {
+  display: inline-block; margin-top: 18px; padding: 12px 24px; font-size: 16px; font-weight: 600;
+  color: #4f46e5; background: #fff; text-decoration: none; border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+.error-btn:hover { transform: scale(1.05); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28); }
+.error-btn:active { transform: scale(0.98); }
+@media (max-width: 768px) { .error-code { font-size: 100px; } .error-title, .error-text { font-size: 16px; } }
+@media (max-width: 480px) { .error-code { font-size: 70px; } .error-title, .error-text { font-size: 14px; } }
