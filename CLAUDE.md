@@ -1,68 +1,85 @@
-# OcciClean - Page de liens (link in bio)
+# link-youkyi - Pages de liens YouKyi (link in bio)
 
-Page statique « link in bio » d'**OcciClean** (nettoyage automobile à domicile, Toulouse & Occitanie), déployée sur Vercel. HTML statique + Tailwind CSS compilé. Pas de framework JS, pas de build d'application : juste du HTML et une feuille Tailwind générée.
+Monorepo statique **data-driven** générant deux pages « link in bio » de **YouKyi**, avec un **fond 3D animé de datacenter** (Three.js), déployées sur Vercel. Le contenu n'est PAS hardcodé : il est décrit en JSON et un script Node génère le HTML.
+
+Deux variantes, une source unique, **thème sombre uniquement** :
+
+| Variante | Profil | Liens | Domaines |
+|---|---|---|---|
+| `link` | « Youkyi » (logo), 8 liens | sombre | `youkyi.fr`, `link.youkyi.fr` |
+| `pro` | « Alexandre Agasseau » (photo), 4 liens | sombre | `pro.youkyi.fr` |
 
 ## Structure des fichiers
 
 ```
-index.html            Page principale : toutes les cartes de liens
-404.html              Page d'erreur 404 (servie par Vercel)
-src/input.css         Source Tailwind (directives @tailwind + composants @apply)
-tailwind.config.js    Config Tailwind (couleurs de marque `brand`, dark mode par classe)
-assets/tailwind.css   CSS COMPILÉ et minifié (généré par la build, référencé par les pages)
-assets/logo.png       Logo OcciClean (favicon + en-tête)
-package.json          Scripts de build Tailwind
-vercel.json           Build + cleanUrls côté Vercel
+config/<variant>.json   Contenu d'une variante (title, name, bio, avatar, footer, og, links[])
+data/networks.mjs       Map réseau -> { label, svg } (SVG inline, fill="currentColor")
+src/templates/
+  layout.html           Page avec {{PLACEHOLDERS}} (dont {{DC_CONFIG}} = réglages du fond)
+  error.html            Page 404 (classes .error-*, pas d'inline -> CSP stricte)
+src/input.css           Tailwind : .link-card(-featured) (cartes verre), .link-icon, .link-label,
+                        .is-<reseau> svg (couleurs marque), .avatar*, .scene-* (fond), .error-*
+tailwind.config.js      Palette `brand`, content -> apps/ + templates + data
+build/generate.mjs      Générateur (ESM, zéro dépendance) ; FROZEN_DC = réglages du fond 3D
+assets/                 Avatars versionnés + vendor/ (Three.js auto-hébergé + datacenter.js)
+apps/                   SORTIE GÉNÉRÉE (gitignorée) : apps/link, apps/pro
+vercel.json             cleanUrls + en-têtes de sécurité (partagés)
 ```
 
-## Anatomie d'une carte de lien (`index.html`)
+`apps/` et `assets/tailwind.css` sont **générés** (gitignorés). `assets/vendor/` est **versionné** (Three.js ~1,3 Mo + moteur). Ne pas éditer `apps/` à la main : éditer la source puis rebuild.
 
-Les liens sont du **HTML hardcodé**, il n'y a aucune structure de données ni génération. Deux modèles de carte :
+## Le générateur (`build/generate.mjs`)
 
-- **Carte standard** : `<a class="link-card group">` contenant un `<span class="link-icon">` (SVG inline) puis le libellé. Pour un libellé avec sous-titre, on enveloppe les deux spans dans un `<span class="flex flex-col">` :
-  ```html
-  <span class="flex flex-col">
-      <span class="link-label">Instagram</span>
-      <span class="text-xs text-slate-500 dark:text-slate-400">Les actualités OcciClean</span>
-  </span>
-  ```
-- **Carte « featured »** (site web) : `<a class="link-card-featured group">`, mise en avant (bordure épaisse, fond teinté, étoile), avec titre + sous-titre.
+Pour chaque variante (`['link','pro']`) :
+1. Lit `config/<variant>.json`.
+2. Construit le HTML des liens via `data/networks.mjs` (SVG) ; classe `is-<network>` pour la couleur. `featured:true` -> carte mise en avant (`.link-card-featured`, étoile, titre violet + sous-titre).
+3. Remplit `layout.html` et `error.html` (remplacement `{{CLE}}`). `{{DC_CONFIG}}` reçoit `cfg.dc || FROZEN_DC` (injecté en `window.DC_CONFIG`).
+4. Écrit `apps/<variant>/{index.html,404.html}` et copie l'avatar + `assets/vendor/` (Three.js + moteur) + `assets/tailwind.css` dans `apps/<variant>/assets/`.
 
-Cartes présentes : Site web (featured), Email (devis), Facebook, Instagram, TikTok.
+`--copy-css` : (re)copie seulement les assets dans les apps (étape finale du build, après Tailwind).
 
-## Styles de carte (`src/input.css`, layer `components`)
+## Le fond Datacenter 3D (`assets/vendor/datacenter.js`)
 
-`.link-card`, `.link-card-featured`, `.link-icon`, `.link-label` sont définis avec `@apply`. Les couleurs de marque viennent de `tailwind.config.js` (clé `brand` : `primary`, `light`, `accent`, `bg`, `darkBg`).
+- Three.js + addons (EffectComposer/UnrealBloom/Reflector) **auto-hébergés** sous `assets/vendor/three/`, résolus par un importmap local (`'three'`, `'three/addons/'`). CSP `script-src 'self'` OK (Three.js n'utilise pas `eval`).
+- Scène : allée de datacenter infinie, LED clignotantes (THREE.Points + shader), bloom, sol réfléchissant, brouillard. **Boucle infinie sans saut** : chaque baie est recyclée individuellement vers le fond (`u.position.z -= TUNNEL`), pas de remise à zéro globale.
+- Lisibilité : `<div id="veil">` (réglé par le moteur) + `.scene-vignette`. **Fallback** : si pas de WebGL, fond sombre simple.
+- Réglable : `window.DC_CONFIG` (la prod) ; `window.DC_PANEL = true` affiche le panneau live (sliders + « Copier la config »). API exposée : `window.DC`.
 
-## Build (régénérer le CSS)
+## Anatomie d'une carte de lien
 
-`assets/tailwind.css` est **compilé**. Toute classe utilitaire utilisée dans `index.html`/`404.html` doit exister dans ce fichier, sinon elle n'a aucun effet. Si on ajoute une classe Tailwind **déjà employée ailleurs** dans le HTML, le rebuild est inutile. Si on introduit une **nouvelle** classe, régénérer :
+- **Carte standard** : `<a class="link-card group">` + `<span class="link-icon is-<network>">SVG</span>` + libellé (`.link-label`) + chevron (CSS `::after`). Sous-titre : envelopper dans `<span class="flex flex-col">`.
+- **Carte « featured »** (Mail) : `<a class="link-card-featured group">`, étoile, titre violet (`text-brand-primary`) + sous-titre (email).
+- **Cartes « verre »** : fond translucide + `backdrop-filter` (glassmorphism), posées sur le fond 3D. Icônes de marque colorées via `.is-<network> svg { color: … }` ; monochromes (X, GitHub, Threads) en blanc.
+
+## Build
+
+`apps/**` et `assets/tailwind.css` sont **compilés**. Tailwind scanne `apps/**/*.html` (générés AVANT la compilation), donc l'ordre du build importe.
 
 ```bash
-npm install        # une fois
-npm run build      # génère assets/tailwind.css minifié
-npm run watch      # mode surveillance pendant l'édition
+npm install
+npm run build      # generate -> tailwind --minify -> copy assets (les deux variantes)
+npm run watch      # surveille src/input.css
+npm run dev        # build + sert apps/link
 ```
 
-Sans Node : `.\tools\tailwindcss.exe -i .\src\input.css -o .\assets\tailwind.css --minify` (binaire non versionné).
+Sur Vercel, la build se relance à chaque push (`vercel.json`).
 
-Sur Vercel, la build se relance automatiquement à chaque push (`vercel.json`).
+## Déploiement Vercel (2 projets, même dépôt)
 
-## Prévisualiser
+Deux projets, **Root Directory = racine**, **Build Command = `npm run build`**. Seul l'**Output Directory** diffère (dashboard) :
+- `youkyi-link` -> `apps/link` -> `youkyi.fr`, `link.youkyi.fr`
+- `youkyi-pro`  -> `apps/pro`  -> `pro.youkyi.fr`
 
-Ouvrir `index.html` dans le navigateur, ou `python -m http.server 8000` puis http://localhost:8000.
+`vercel.json` partagé (pas de `outputDirectory` dedans). CSP stricte conservée (`img-src 'self' data:`, `script-src 'self' 'unsafe-inline'`).
 
 ## Conventions
 
 - Toujours en **français**, orthographe et accents corrects.
-- Jamais de tirets cadratins (em-dash U+2014) : virgules, deux-points, parenthèses ou phrases séparées.
-- Le dark mode est piloté par la classe `dark` sur `<html>` (script inline en bas d'`index.html`, persistance via `localStorage.theme`). Toute couleur doit avoir sa variante `dark:`.
-
-## Analytics Vercel
-
-Speed Insights + Web Analytics sont intégrés via des **balises `<script>`** dans `index.html` et `404.html` (méthode HTML pure de Vercel), pas via le package npm `@vercel/*` : il n'y a pas de bundler pour `import` un module ici. Les scripts sont servis automatiquement par Vercel depuis `/_vercel/speed-insights/script.js` et `/_vercel/insights/script.js` une fois les fonctionnalités activées dans le dashboard. Ne pas tenter d'installer `@vercel/speed-insights` ou `@vercel/analytics`. Les métriques n'apparaissent qu'après déploiement sur Vercel (pas en local).
+- Jamais de tiret cadratin (em-dash U+2014) : virgules, deux-points, parenthèses ou phrases séparées.
+- **Thème sombre unique** : `<html class="dark">` forcé, plus de bascule ni de détection clair/sombre.
+- Analytics Vercel via balises `<script>` (pas le package npm `@vercel/*`).
 
 ## Git
 
-- **Ne jamais** ajouter de ligne `Co-Authored-By` (ni aucune mention d'auteur ajouté) dans les messages de commit. Les commits doivent rester au seul nom de l'utilisateur.
-- Messages de commit en français, format conventionnel (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`), sans em-dash.
+- **Ne jamais** ajouter de ligne `Co-Authored-By` (ni aucune mention d'auteur ajouté). Au seul nom de l'utilisateur.
+- Messages de commit en français, format conventionnel (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `build:`), sans em-dash. Commits **atomiques** (un changement logique par commit).

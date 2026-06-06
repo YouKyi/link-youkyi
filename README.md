@@ -1,65 +1,72 @@
-# OcciClean - Page de liens
+# link-youkyi
 
-Page « link in bio » statique d'OcciClean (HTML + Tailwind CSS compilé), prête à déployer sur Vercel.
+Pages de liens (« link in bio ») de **YouKyi**, en HTML statique + Tailwind CSS, avec un **fond 3D animé de datacenter** (Three.js auto-hébergé). Le contenu est décrit en JSON et un petit script Node génère les pages. Déployé sur Vercel.
 
-## Structure
+Deux variantes, une source unique, **thème sombre uniquement** :
+
+| Variante | Profil | Liens | Domaines visés |
+|---|---|---|---|
+| `link` | « Youkyi » (logo), 8 liens | LinkedIn, Instagram, Threads, X, YouTube, Facebook, GitHub, Mail | `youkyi.fr`, `link.youkyi.fr` |
+| `pro` | « Alexandre Agasseau » (photo), 4 liens | LinkedIn, X, GitHub, Mail | `pro.youkyi.fr` |
+
+## Architecture
 
 ```
-index.html            Page principale (les liens)
-404.html              Page d'erreur 404 (servie par Vercel)
-src/input.css         Source Tailwind (directives + composants @apply)
-tailwind.config.js    Configuration Tailwind (couleurs de marque, dark mode)
-assets/tailwind.css   CSS COMPILÉ (généré par la build, référencé par les pages)
-package.json          Scripts de build
-vercel.json           Build automatique côté Vercel
+config/<variant>.json   Contenu d'une variante (nom, bio, avatar, liste de liens, og)
+data/networks.mjs       Map réseau -> { label, svg } (SVG inline)
+src/templates/          layout.html (page) + error.html (404), avec {{placeholders}}
+src/input.css           Tailwind source : cartes verre, classes de scène, avatar, 404
+tailwind.config.js      Palette `brand`, content -> apps/ + templates
+build/generate.mjs      Générateur (ESM, zéro dépendance) + réglages du fond (FROZEN_DC)
+assets/                 Avatars (logo-youkyi.png, alexandre.jpg) + vendor/ (Three.js + datacenter.js)
+apps/                   SORTIE GÉNÉRÉE (gitignorée) : apps/link, apps/pro
+vercel.json             cleanUrls + en-têtes de sécurité (CSP, HSTS…) partagés
 ```
 
-## Développement local
+`apps/` et `assets/tailwind.css` sont **générés** (gitignorés), reconstruits par `npm run build` en local et sur Vercel. `assets/vendor/` (Three.js + moteur) est **versionné** et copié dans chaque variante au build.
 
-### Avec Node.js (recommandé)
+## Le fond Datacenter 3D
+
+- Moteur : `assets/vendor/datacenter.js` (adapté d'un design Claude). Allée de datacenter infinie : baies de serveurs texturées, rangées de LED clignotantes (shader), bloom, sol réfléchissant, brouillard. **Boucle infinie sans saut** (chaque baie est recyclée individuellement vers le fond). Voile + vignette pour la lisibilité du texte. **Fallback** : fond sombre simple si pas de WebGL.
+- Three.js est **auto-hébergé** (`assets/vendor/three/…`) via un importmap local : aucun CDN, la CSP stricte (`script-src 'self'`) est respectée.
+- Réglages : la config validée vit dans `FROZEN_DC` (`build/generate.mjs`) et est injectée en `window.DC_CONFIG`. Pour ré-explorer un réglage, ouvrir une page avec `window.DC_PANEL = true` (panneau live + « Copier la config »).
+
+## Modifier le contenu
+
+- **Ajouter / retirer / réordonner un lien** : éditer le tableau `links` de `config/link.json` ou `config/pro.json` (l'ordre du tableau = l'ordre d'affichage).
+- **Nouveau réseau** : ajouter son entrée (libellé + SVG) dans `data/networks.mjs`, le référencer dans une config. Pour une icône colorée : `.is-<reseau> svg { color: #...; }` dans `src/input.css`.
+- **Texte commun, styles, footer** : `src/templates/layout.html` et `src/input.css` (modifiés une seule fois pour les deux variantes).
+- **Réglage du fond 3D** : `FROZEN_DC` dans `build/generate.mjs`.
+
+## Build & développement local
 
 ```bash
-npm install
-npm run build      # génère assets/tailwind.css
-# ou, en mode surveillance pendant l'édition :
-npm run watch
+npm install        # une fois
+npm run build      # génère apps/link et apps/pro (HTML + CSS + avatars + vendor)
+npm run watch      # surveille src/input.css pendant l'édition du CSS
+npm run dev        # build + sert apps/link
 ```
 
-### Sans Node.js (binaire standalone)
+Aperçu d'une variante : `npx serve apps/link` (ou `apps/pro`). Le fond 3D nécessite WebGL.
 
-Le binaire Tailwind autonome (Windows) est dans `tools/tailwindcss.exe` (non versionné).
+## Déploiement Vercel (2 projets, même dépôt)
 
-```powershell
-.\tools\tailwindcss.exe -i .\src\input.css -o .\assets\tailwind.css --minify
-```
+Deux projets Vercel important ce dépôt, tous deux avec **Root Directory = racine** et **Build Command = `npm run build`** (fourni par `vercel.json`). Seul l'**Output Directory** diffère (réglé par projet dans le dashboard) :
 
-### Prévisualiser
+| Projet Vercel | Output Directory | Domaines |
+|---|---|---|
+| `youkyi-link` | `apps/link` | `youkyi.fr`, `link.youkyi.fr` |
+| `youkyi-pro`  | `apps/pro`  | `pro.youkyi.fr` |
 
-Une fois `assets/tailwind.css` généré, ouvrir simplement `index.html` dans le navigateur
-(double-clic), ou servir le dossier :
+`vercel.json` (partagé) fournit `cleanUrls` et les en-têtes de sécurité (CSP, HSTS, X-Frame-Options). La CSP autorise les modules/importmap en `'self'` ; Three.js n'utilise pas `eval`, donc pas besoin de `'unsafe-eval'`.
 
-```bash
-python -m http.server 8000
-# puis http://localhost:8000
-```
+## Analytics Vercel
 
-## Déploiement Vercel
+Speed Insights + Web Analytics via balises `<script>` dans les templates (méthode HTML pure), servis depuis `/_vercel/…`. Pas de package npm `@vercel/*`. Métriques visibles après déploiement.
 
-Le dépôt est prêt à l'emploi :
+## Conventions
 
-- `vercel.json` indique à Vercel de lancer `npm run build` puis de servir la racine.
-- `404.html` à la racine est automatiquement utilisée comme page d'erreur.
-- `cleanUrls` masque les extensions `.html`.
-
-Importer le dépôt sur Vercel (Framework Preset : **Other**) et déployer, aucune autre
-configuration n'est nécessaire.
-
-## Modifier les liens / couleurs
-
-- Liens, textes : éditer `index.html`.
-- Couleurs de marque : `tailwind.config.js` (clé `brand`), puis relancer la build.
-- Styles de carte réutilisables : `.link-card`, `.link-card-featured`, `.link-icon`,
-  `.link-label` dans `src/input.css`.
-
-> Après toute modification des classes, régénérer `assets/tailwind.css` (voir ci-dessus).
-> Sur Vercel, la build se relance automatiquement à chaque push.
+- Toujours en **français**, orthographe et accents corrects.
+- Jamais de tiret cadratin (em-dash U+2014).
+- **Thème sombre unique** (plus de bascule clair/sombre) ; `<html class="dark">` est forcé.
+- Commits sans `Co-Authored-By`, en français, format conventionnel (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `build:`).
