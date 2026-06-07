@@ -17,7 +17,7 @@ const VARIANTS = ['link', 'pro'];
 const copyCssOnly = process.argv.includes('--copy-css');
 
 // Réglages validés du fond Datacenter 3D (surchargés par cfg.dc si présent dans une config).
-const FROZEN_DC = { camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045, glow: 1.20, fog: 0.025, veil: 0.32, palette: 'datacenter', bg: '#04060a' };
+const FROZEN_DC = { camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045, glow: 1.20, fog: 0.025, veil: 0.32, palette: 'violet', bg: '#0B0712' };
 
 const layoutTpl = readFileSync(join(root, 'src/templates/layout.html'), 'utf8');
 const errorTpl = readFileSync(join(root, 'src/templates/error.html'), 'utf8');
@@ -45,7 +45,7 @@ function renderLink(link) {
     return `            <a href="${escapeHtml(url)}"${attrs} class="link-card-featured group">
                 <span class="${iconClass}">${net.svg}</span>
                 <span class="flex flex-col">
-                    <span class="font-bold text-sm text-brand-primary">${escapeHtml(label)}</span>
+                    <span class="font-bold text-sm featured-title">${escapeHtml(label)}</span>
                     <span class="text-xs text-slate-600 dark:text-slate-400">${escapeHtml(subtitle)}</span>
                 </span>
             </a>`;
@@ -82,6 +82,7 @@ function buildMap(cfg) {
     FOOTER: escapeHtml(cfg.footer || ''),
     NAV_LABEL: escapeHtml(`Liens ${cfg.name}`),
     DC_CONFIG: JSON.stringify(cfg.dc || FROZEN_DC),
+    DA_CLASS: cfg.accent === 'premium' ? 'da-premium' : '',
     LINKS: cfg.links.map(renderLink).join('\n'),
   };
 }

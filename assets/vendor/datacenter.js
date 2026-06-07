@@ -70,7 +70,12 @@ if (renderer) {
     multi: [[190,0.9,0.6,3],[150,0.9,0.55,3],[210,0.9,0.6,2],[280,0.8,0.62,2],[45,0.95,0.6,2],[0,0.9,0.58,1]],
     cyan:  [[185,0.9,0.6,4],[200,0.9,0.6,3],[160,0.8,0.55,2],[220,0.7,0.6,1]],
     amber: [[40,0.95,0.6,4],[28,0.95,0.58,3],[55,0.9,0.6,2],[0,0.85,0.55,1]],
-    warm:  [[18,0.95,0.58,3],[0,0.9,0.55,3],[300,0.7,0.6,2],[45,0.9,0.6,2]]
+    warm:  [[18,0.95,0.58,3],[0,0.9,0.55,3],[300,0.7,0.6,2],[45,0.9,0.6,2]],
+    // Violet « YouKyi » : violet franc (hue ~271°, vrai violet, pas le magenta de GitHub), vif,
+    // avec un rare vert #34D399 (statut « ok »).
+    violet: [[271,0.95,0.58,6],[276,0.9,0.66,4],[266,0.95,0.5,2],[271,0.3,0.95,1],[150,0.85,0.55,1]],
+    // Violet premium « confiance B2B » (réf. #7F32C8, violet franc ~271° désaturé) : sobre, sans vert.
+    violetPremium: [[271,0.62,0.5,6],[275,0.58,0.6,4],[266,0.78,0.42,2],[271,0.22,0.92,1]]
   };
   function pickColor(rnd, pal){ let tot=0; for(const p of pal)tot+=p[3]; let r=rnd()*tot; for(const p of pal){ r-=p[3]; if(r<=0)return p; } return pal[0]; }
 
@@ -150,8 +155,8 @@ if (renderer) {
 
   const rackMat = new THREE.MeshStandardMaterial({ color: 0x060709, roughness: 0.5, metalness: 0.85 });
   const rackGeo = new THREE.BoxGeometry(RACK_W, RACK_H, RACK_Z);
-  const meshMats = []; for(let i=0;i<3;i++){ const tex=makeRackTexture(1000+i*137); meshMats.push(new THREE.MeshStandardMaterial({ map:tex, emissive:0x9fc0ff, emissiveMap:tex, emissiveIntensity:0.12, roughness:0.62, metalness:0.5 })); }
-  const serverMats = []; for(let i=0;i<3;i++){ const tex=makeServerTexture(2000+i*211); serverMats.push(new THREE.MeshStandardMaterial({ map:tex, emissive:0x9fc0ff, emissiveMap:tex, emissiveIntensity:0.14, roughness:0.58, metalness:0.45 })); }
+  const meshMats = []; for(let i=0;i<3;i++){ const tex=makeRackTexture(1000+i*137); meshMats.push(new THREE.MeshStandardMaterial({ map:tex, emissive:0xc79fff, emissiveMap:tex, emissiveIntensity:0.12, roughness:0.62, metalness:0.5 })); }
+  const serverMats = []; for(let i=0;i<3;i++){ const tex=makeServerTexture(2000+i*211); serverMats.push(new THREE.MeshStandardMaterial({ map:tex, emissive:0xc79fff, emissiveMap:tex, emissiveIntensity:0.14, roughness:0.58, metalness:0.45 })); }
   const handleGeo = new THREE.BoxGeometry(0.05, RACK_H*0.32, 0.10);
   const handleMat = new THREE.MeshStandardMaterial({ color: 0x04050a, roughness: 0.35, metalness: 0.6 });
   const faceGeo = new THREE.PlaneGeometry(RACK_Z*0.97, RACK_H*0.992);
@@ -321,7 +326,7 @@ if (renderer) {
       input.addEventListener('input', ()=>{ config[def.key]=parseFloat(input.value); val.textContent=def.fmt(config[def.key]); if(REGEN.includes(def.key)) buildLEDs(); applyLive(); });
     });
     const palRow=document.createElement('div'); palRow.className='row';
-    palRow.innerHTML=`<div class="lab"><span>Ambiance LED</span></div><select id="in-pal"><option value="green">Vert (réf.)</option><option value="datacenter">Bleu</option><option value="multi">Multicolore</option><option value="cyan">Cyan / bleu</option><option value="amber">Ambre / or</option><option value="warm">Chaud (rouge/violet)</option></select>`;
+    palRow.innerHTML=`<div class="lab"><span>Ambiance LED</span></div><select id="in-pal"><option value="green">Vert (réf.)</option><option value="datacenter">Bleu</option><option value="multi">Multicolore</option><option value="cyan">Cyan / bleu</option><option value="amber">Ambre / or</option><option value="warm">Chaud (rouge/violet)</option><option value="violet">Violet (YouKyi)</option><option value="violetPremium">Violet premium (pro)</option></select>`;
     controls.appendChild(palRow);
     const palSel=palRow.querySelector('select'); palSel.value=config.palette; palSel.addEventListener('change', ()=>{ config.palette=palSel.value; buildLEDs(); });
     const bgRow=document.createElement('div'); bgRow.className='row'; bgRow.innerHTML=`<div class="lab"><span>Couleur de fond</span></div><input type="color" id="in-bg">`;
