@@ -10,11 +10,13 @@
   "avatarShape": "circle",
   "theme": "dark",
   "themeColor": "#04060a",
+  "accent": "premium",
+  "dc": { "camSpeed": 0.34, "blink": 0.9, "density": 0.62, "ledSize": 0.04, "glow": 0.85, "fog": 0.03, "veil": 0.40, "palette": "violetPremium", "bg": "#0B0712" },
   "footer": "Create more value than you capture",
   "ogUrl": "https://pro.youkyi.fr",
   "ogImage": "/assets/alexandre.jpg",
   "links": [
-    { "network": "mail", "featured": true, "label": "Mail MOI !", "url": "mailto:contact@youkyi.fr", "subtitle": "contact@youkyi.fr" },
+    { "network": "mail", "featured": true, "label": "Parlons de votre infrastructure", "url": "mailto:contact@youkyi.fr", "subtitle": "contact@youkyi.fr" },
     { "network": "linkedin", "url": "https://www.linkedin.com/in/alexandreagasseau/" },
     { "network": "twitter", "url": "https://x.com/RC_YouKyi" },
     { "network": "github", "url": "https://www.github.com/YouKyi" }
