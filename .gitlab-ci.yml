@@ -27,5 +27,8 @@ include:
 - template: Auto-DevOps.gitlab-ci.yml
 variables:
   SECRET_DETECTION_ENABLED: 'true'
+  # code_quality (CodeClimate) est deprecie par GitLab et ne produit pas de rapport
+  # sur ce runner ; sans interet pour un site statique genere.
+  CODE_QUALITY_DISABLED: 'true'
 secret_detection:
   stage: secret-detection
