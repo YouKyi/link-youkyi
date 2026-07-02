@@ -9,7 +9,7 @@ import * as THREE from 'three';
 
 // Identifiant de build, affiché dans le panneau du tuner : permet de vérifier
 // d'un coup d'oeil que le navigateur n'exécute pas une version en cache.
-const DC_BUILD = 'b11-neons-calmes';
+const DC_BUILD = 'b12-poster-aligne';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -555,6 +555,16 @@ if (renderer) {
   // Capture d'un poster statique de la scène (au tuner) : sert à générer
   // assets/poster-<variante>.webp, affiché tant que le moteur 3D n'a pas démarré.
   function capturePoster(){
+    // Capture la POSE INITIALE deterministe (celle du tout premier rendu d'une page
+    // fraiche : t=0, camera au depart) : le fondu poster -> 3D au chargement est ainsi
+    // aligne, sans saut. Pas de restauration necessaire : la frame suivante d'animate()
+    // recalcule camera et uniforms depuis time/camZ.
+    camera.position.set(0, 1.5, Z_CAM);
+    camera.lookAt(0, 0.55, Z_CAM - 12);
+    ledMat.uniforms.uTime.value = 0;
+    if (screenMat) screenMat.uniforms.uTime.value = 0;
+    if (dustMat) { dustMat.uniforms.uTime.value = 0; dustMat.uniforms.uCamZ.value = Z_CAM; }
+    if (endGlow) endGlow.position.z = Z_CAM - 60;
     composer.render();   // frame fraîche dans le buffer (preserveDrawingBuffer est false)
     renderer.domElement.toBlob((blob) => {
       if (!blob) return;
