@@ -17,7 +17,9 @@ const VARIANTS = ['link', 'pro'];
 const copyCssOnly = process.argv.includes('--copy-css');
 
 // Réglages validés du fond Datacenter 3D (surchargés par cfg.dc si présent dans une config).
-const FROZEN_DC = { camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045, glow: 1.20, fog: 0.025, veil: 0.32, palette: 'violet', bg: '#0B0712' };
+const FROZEN_DC = { camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045, glow: 1.20,
+  fog: 0.025, veil: 0.32, palette: 'violet', bg: '#0B0712',
+  mirror: 1, ramp: 1.0, shaft: 0.5, dust: 0.5, traffic: 0.6, screens: 1.0 };
 
 const layoutTpl = readFileSync(join(root, 'src/templates/layout.html'), 'utf8');
 const errorTpl = readFileSync(join(root, 'src/templates/error.html'), 'utf8');

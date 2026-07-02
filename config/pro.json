@@ -11,7 +11,7 @@
   "theme": "dark",
   "themeColor": "#04060a",
   "accent": "premium",
-  "dc": { "camSpeed": 0.34, "blink": 0.9, "density": 0.62, "ledSize": 0.04, "glow": 0.85, "fog": 0.03, "veil": 0.40, "palette": "violetPremium", "bg": "#0B0712" },
+  "dc": { "camSpeed": 0.34, "blink": 0.9, "density": 0.62, "ledSize": 0.04, "glow": 0.85, "fog": 0.03, "veil": 0.40, "palette": "violetPremium", "bg": "#0B0712", "mirror": 1, "ramp": 0.8, "shaft": 0.35, "dust": 0.3, "traffic": 0.4, "screens": 0.6 },
   "footer": "Create more value than you capture",
   "ogUrl": "https://pro.youkyi.fr",
   "ogImage": "/assets/alexandre.jpg",

@@ -21,7 +21,8 @@ src/input.css           Tailwind : .link-card(-featured) (cartes verre), .link-i
                         .is-<reseau> svg (couleurs marque), .avatar*, .scene-* (fond), .error-*
 tailwind.config.js      Palette `brand`, content -> apps/ + templates + data
 build/generate.mjs      Générateur (ESM, zéro dépendance) ; FROZEN_DC = réglages du fond 3D
-assets/                 Avatars versionnés + vendor/ (Three.js auto-hébergé + datacenter.js)
+assets/                 Avatars versionnés + poster-<variant>.webp (optionnels) + vendor/ (Three.js
+                        auto-hébergé + moteur du fond : datacenter.js, dc-textures.js, dc-panel.js)
 apps/                   SORTIE GÉNÉRÉE (gitignorée) : apps/link, apps/pro
 vercel.json             cleanUrls + en-têtes de sécurité (partagés)
 ```
@@ -38,12 +39,19 @@ Pour chaque variante (`['link','pro']`) :
 
 `--copy-css` : (re)copie seulement les assets dans les apps (étape finale du build, après Tailwind).
 
-## Le fond Datacenter 3D (`assets/vendor/datacenter.js`)
+## Le fond Datacenter 3D (`assets/vendor/`)
 
-- Three.js + addons (EffectComposer/UnrealBloom/Reflector) **auto-hébergés** sous `assets/vendor/three/`, résolus par un importmap local (`'three'`, `'three/addons/'`). CSP `script-src 'self'` OK (Three.js n'utilise pas `eval`).
-- Scène : allée de datacenter infinie, LED clignotantes (THREE.Points + shader), bloom, sol réfléchissant, brouillard. **Boucle infinie sans saut** : chaque baie est recyclée individuellement vers le fond (`u.position.z -= TUNNEL`), pas de remise à zéro globale.
+- Moteur en 3 modules ESM : `datacenter.js` (scène, boucle de rendu, config, démarrage), `dc-textures.js` (textures procédurales canvas : atlas de 8 façades, sol, écrans de logs, chemins de câbles, lueur), `dc-panel.js` (panneau du tuner, chargé dynamiquement seulement si `window.DC_PANEL`).
+- Monde **statique** : 2 périodes de tunnel identiques construites une fois (baies, LED, rampes en `InstancedMesh`) ; la boucle infinie vient du **wrap de la caméra** (téléportée d'une période en arrière), plus aucun recyclage baie par baie.
+- Pas de `Reflector` : le reflet au sol est la seconde moitié des instances (`scale.y = -1`) des mêmes `InstancedMesh` (baies, rampes) + une copie atténuée des LED. Sol semi-transparent texturé (dalles + pools de lumière sous les rampes).
+- Façades : atlas de 8 tuiles (portes grillagées, piles de serveurs, switch + brassage, baie de stockage, PDU) dans une seule texture, un seul `ShaderMaterial` par `InstancedMesh`.
+- Éclairage et vie : rampes plafond émissives instanciées + faisceaux volumétriques additifs (cônes texturés) + poussière en suspension (positionnée caméra-relative, ne saute jamais au wrap) ; écrans de logs instanciés (défilement piloté par shader) ; LED de trafic réseau en rafales.
+- Config (`window.DC_CONFIG`, fusionnée sur `DEFAULTS`) : `camSpeed, blink, density, ledSize, glow, fog, veil, palette, bg` (historiques) + `mirror, ramp, shaft, dust, traffic, screens` (reflet au sol on/off, intensité des rampes, faisceaux, poussière, trafic LED, vitesse des écrans).
+- Poster statique : `assets/poster-<variant>.webp` (facultatif, capturé au tuner via le bouton 📷 -> `window.DC.capturePoster()`), copié par `generate.mjs` en `apps/<variant>/assets/poster.webp` ; placeholder `{{POSTER_CLASS}}` vaut `has-img` si le fichier existe, vide sinon.
+- Démarrage différé : le moteur démarre après `load` + `requestIdleCallback` (sauf le tuner, qui démarre immédiatement) ; en `prefers-reduced-motion: reduce`, il ne démarre jamais (le poster ou le fond sombre reste seul). Fondu CSS (`.scene-canvas.ready`) au premier rendu.
+- Three.js + addons (EffectComposer/UnrealBloom) **auto-hébergés** sous `assets/vendor/three/`, résolus par un importmap local (`'three'`, `'three/addons/'`). CSP `script-src 'self'` OK (Three.js n'utilise pas `eval`).
 - Lisibilité : `<div id="veil">` (réglé par le moteur) + `.scene-vignette`. **Fallback** : si pas de WebGL, fond sombre simple.
-- Réglable : `window.DC_CONFIG` (la prod) ; `window.DC_PANEL = true` affiche le panneau live (sliders + « Copier la config »). API exposée : `window.DC`.
+- Réglable : `window.DC_CONFIG` (la prod, cf. `FROZEN_DC` dans `build/generate.mjs`) ; `window.DC_PANEL = true` charge `dc-panel.js` (sliders + « Copier la config » + « 📷 Poster »). API exposée : `window.DC`.
 
 ## Anatomie d'une carte de lien
 

@@ -18,6 +18,7 @@ export function buildPanel(ctx){
     { key:'shaft', label:'Faisceaux', min:0, max:1, step:0.05, fmt:v=>v.toFixed(2) },
     { key:'dust', label:'Poussière', min:0, max:1, step:0.05, fmt:v=>v.toFixed(2) },
     { key:'screens', label:'Écrans (vitesse)', min:0, max:3, step:0.1, fmt:v=>v.toFixed(1) },
+    { key:'mirror', label:'Reflet au sol', min:0, max:1, step:1, fmt:v=>v?'on':'off' },
     { group:'Lisibilité' },
     { key:'veil', label:'Voile central', min:0, max:1, step:0.02, fmt:v=>v.toFixed(2) }
   ];
