@@ -86,6 +86,11 @@ function buildMap(cfg, name) {
     DC_CONFIG: JSON.stringify(cfg.dc || FROZEN_DC),
     DA_CLASS: cfg.accent === 'premium' ? 'da-premium' : '',
     POSTER_CLASS: existsSync(join(root, 'assets', `poster-${cfg.variant || name}.webp`)) ? 'has-img' : '',
+    // Préchargement du poster : sans lui, la première visite (cache froid) montre un fond
+    // noir le temps que le CSS déclenche le téléchargement, puis deux transitions.
+    POSTER_PRELOAD: existsSync(join(root, 'assets', `poster-${cfg.variant || name}.webp`))
+      ? '    <link rel="preload" href="/assets/poster.webp" as="image" type="image/webp">\n'
+      : '',
     LINKS: cfg.links.map(renderLink).join('\n'),
   };
 }
