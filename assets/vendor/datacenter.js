@@ -128,7 +128,7 @@ if (renderer) {
         float pool = pow(0.5 + 0.5*cos(6.28318*d), 1.6);
         float light = mix(1.0, 0.55 + 0.9*pool, clamp(uRampBright, 0.0, 2.0));
         vec3 col = tex * uBright * light;
-        float f = 1.0 - exp(-uFogDensity*uFogDensity*vDist*vDist*2.0);
+        float f = 1.0 - exp(-uFogDensity*uFogDensity*vDist*vDist);
         gl_FragColor = vec4(mix(col, uFogColor, clamp(f,0.0,1.0)), 1.0);
       }`,
     side: THREE.DoubleSide,
@@ -210,11 +210,14 @@ if (renderer) {
         const j = i + mir*N;
         setInst(casesIM, j, s.side*RACK_X, RACK_H/2+0.05, s.z, null, mir);
         _qF.setFromAxisAngle(new THREE.Vector3(0,1,0), -s.side*Math.PI/2);
-        setInst(facesIM, j, s.side*(FACE_X - FACE_RECESS), RACK_H/2+0.05, s.z, _qF, mir);
+        // La façade reste plaquée au fond du caisson (FACE_X - 0.02) ; ce sont les montants qui
+        // avancent de FACE_RECESS vers l'allée, ce qui donne l'impression que la façade est
+        // renfoncée. Ne pas mettre la façade à FACE_X + FACE_RECESS : elle serait dans le caisson opaque.
+        setInst(facesIM, j, s.side*(FACE_X - 0.02), RACK_H/2+0.05, s.z, _qF, mir);
         tiles[j*2]   = (s.variant%4)/4;
         tiles[j*2+1] = 1 - (Math.floor(s.variant/4)+1)/2;
-        setInst(pillarsIM, j*2,   s.side*(FACE_X-0.02), RACK_H/2+0.05, s.z - RACK_Z*0.44, null, mir);
-        setInst(pillarsIM, j*2+1, s.side*(FACE_X-0.02), RACK_H/2+0.05, s.z + RACK_Z*0.44, null, mir);
+        setInst(pillarsIM, j*2,   s.side*(FACE_X - FACE_RECESS), RACK_H/2+0.05, s.z - RACK_Z*0.44, null, mir);
+        setInst(pillarsIM, j*2+1, s.side*(FACE_X - FACE_RECESS), RACK_H/2+0.05, s.z + RACK_Z*0.44, null, mir);
       }
     });
     // aTile est un attribut PAR INSTANCE : on clone la géométrie pour ne pas le faire fuiter sur faceGeo partagé.
@@ -237,7 +240,7 @@ if (renderer) {
     for(const s of slots){
       // Graine par (seed, r, side) uniquement (jamais par p) : les 2 périodes restent identiques -> pas de saut au wrap.
       const rnd = mulberry32(((seed ^ (s.r*73856093) ^ (s.side===1?19349663:0))>>>0) || 1);
-      const x = s.side*(FACE_X - FACE_RECESS - 0.012);
+      const x = s.side*(FACE_X - 0.032);
       const addLED=(yy,zz,c,fixed,b)=>{ pos.push(x,yy,s.z+zz); col.push(c.r,c.g,c.b); pha.push(rnd()); rate.push(fixed?0.03:0.5+rnd()*2.2); base.push(b); };
       const z0 = -ledZ/2;
       let uu=0;
