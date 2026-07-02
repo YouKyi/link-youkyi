@@ -70,7 +70,7 @@ if (renderer) {
   // un Group cloné (scale.y = -1) mais la seconde moitié des instances -> encore une passe, moins d'objets.
   const FACE_RECESS = 0.10;          // renfoncement de la façade dans le caisson
   let slots = [], casesIM, facesIM, pillarsIM, rampsIM, rampMat, NRAMP, ledPoints = null, ledMirror = -1;
-  let shaftMat, dustMat;
+  let shaftMat, dustMat, endGlow = null;
 
   const PALETTES = {
     green: [[128,0.95,0.58,9],[118,0.92,0.54,4],[140,0.85,0.56,2],[150,0.8,0.6,1.5],[212,0.95,0.62,2.2],[225,0.9,0.64,1.2]],
@@ -93,12 +93,12 @@ if (renderer) {
   const faceGeo = new THREE.PlaneGeometry(RACK_Z*0.97, RACK_H*0.992);
   const pillarMat = new THREE.MeshStandardMaterial({ color: 0x14161c, roughness: 0.45, metalness: 0.7, side: THREE.DoubleSide });
 
-  // Atlas de façades (8 tuiles) -> un seul ShaderMaterial remplace les 6 MeshStandardMaterial + textures.
-  const atlas = makeFacadeAtlas(renderer.capabilities.maxTextureSize);
+  // Atlas de façades (8 tuiles, grille 4x2) -> un seul ShaderMaterial remplace les 6 MeshStandardMaterial + textures.
+  // Texture construite dans start() (canvas lourd, 100 % gaspillé sous reduced-motion) : uAtlas initialisé à null.
   const faceMat = new THREE.ShaderMaterial({
     uniforms: {
-      uAtlas: { value: atlas.texture },
-      uTileScale: { value: new THREE.Vector2(1/atlas.cols, 1/atlas.rows) },
+      uAtlas: { value: null },
+      uTileScale: { value: new THREE.Vector2(1/4, 1/2) },
       uBright: { value: 1.0 },
       uFogColor: { value: new THREE.Color(config.bg) },
       uFogDensity: { value: config.fog },
@@ -171,7 +171,7 @@ if (renderer) {
   // de rangées pour les deux périodes -> wrap invisible).
   const screenGeo = new THREE.PlaneGeometry(0.62, 0.44);
   const screenMat = new THREE.ShaderMaterial({
-    uniforms: { uMap:{value:makeLogTexture()}, uTime:{value:0}, uSpeed:{value:config.screens} },
+    uniforms: { uMap:{value:null}, uTime:{value:0}, uSpeed:{value:config.screens} },   // uMap construit dans start()
     side: THREE.DoubleSide,
     vertexShader: `
       attribute float aPhase;
@@ -264,13 +264,12 @@ if (renderer) {
     rampsIM.instanceMatrix.needsUpdate = true; rampsIM.frustumCulled = false;
     worldGroup.add(rampsIM);
 
-    // Fond d'allée : aux deux extrémités de période, un plan de lueur discret.
+    // Fond d'allée : lueur caméra-relative, distance constante, fondue par le brouillard
+    // (périodicité du wrap préservée). Ajoutée à `scene` (pas `worldGroup`) et suivie dans animate().
     const glowMat = new THREE.MeshBasicMaterial({ map: makeGlowTexture(), transparent: true,
       blending: THREE.AdditiveBlending, depthWrite: false, color: 0x8f7ad9, opacity: 0.5 });
-    for(const zEnd of [Z0 - TUNNEL - 2, Z0 - 2*TUNNEL - 2]){
-      const glow = new THREE.Mesh(new THREE.PlaneGeometry(9, 5), glowMat);
-      glow.position.set(0, 2.2, zEnd); worldGroup.add(glow);
-    }
+    endGlow = new THREE.Mesh(new THREE.PlaneGeometry(9, 5), glowMat);
+    endGlow.position.set(0, 2.2, Z_CAM - 60); scene.add(endGlow);
   }
 
   function buildAtmosphere(){
@@ -486,7 +485,7 @@ if (renderer) {
   let camZ = Z_CAM;
   const t0 = performance.now();
   const FRAME_MS = 1000 / 30;   // ~30 fps : ~5x moins de charge GPU, invisible sur un fond lent
-  let raf = 0, last = 0;
+  let raf = 0, last = 0, started = false;   // started : les handlers restent inertes tant que start() n'a pas construit la scène
   const stats = { ms: 0, calls: 0 };   // instrumentation perf (ms/frame CPU, EMA) : voir window.DC.stats
   function animate(now){
     if (document.hidden) { raf = 0; return; }   // 0 GPU quand l'onglet est caché
@@ -498,6 +497,7 @@ if (renderer) {
     screenMat.uniforms.uTime.value = time;
     camZ -= config.camSpeed*dt;
     if (camZ < Z_CAM - TUNNEL) camZ += TUNNEL;
+    endGlow.position.z = camZ - 60;
     dustMat.uniforms.uTime.value = time; dustMat.uniforms.uCamZ.value = camZ;
     camera.position.set(Math.sin(time*0.12)*0.10, 1.5+Math.sin(time*0.1)*0.04, camZ);
     camera.lookAt(Math.sin(time*0.05)*0.15, 0.55, camZ-12);
@@ -507,8 +507,9 @@ if (renderer) {
     stats.calls = renderer.info.render.calls;
     if (!canvas.classList.contains('ready')) canvas.classList.add('ready');   // 1re frame prête -> fondu poster -> 3D
   }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(animate); } });
+  document.addEventListener('visibilitychange', () => { if (!started) return; if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(animate); } });
   function resize(){
+    if (!started) return;
     const W=window.innerWidth, H=window.innerHeight, dpr=pixRatio();
     renderer.setPixelRatio(dpr); renderer.setSize(W,H);
     composer.setPixelRatio(dpr); composer.setSize(W,H); bloom.setSize(W,H);
@@ -536,6 +537,10 @@ if (renderer) {
   // premier rendu du contenu. Le poster CSS reste visible entre-temps.
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   function start(){
+    started = true;
+    // Textures lourdes (canvas) construites seulement au démarrage réel du moteur, jamais sous reduced-motion.
+    faceMat.uniforms.uAtlas.value = makeFacadeAtlas(renderer.capabilities.maxTextureSize).texture;
+    screenMat.uniforms.uMap.value = makeLogTexture();
     buildStatics(); buildAtmosphere(); buildRacks(); buildLEDs(); buildScreens();
     resize(); applyLive();
     if (window.DC_PANEL) import('./dc-panel.js').then(m => m.buildPanel({
