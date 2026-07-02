@@ -9,7 +9,7 @@ import * as THREE from 'three';
 
 // Identifiant de build, affiché dans le panneau du tuner : permet de vérifier
 // d'un coup d'oeil que le navigateur n'exécute pas une version en cache.
-const DC_BUILD = 'b9-sans-modulation';
+const DC_BUILD = 'b10-rampes-plafonnees';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -491,9 +491,13 @@ if (renderer) {
     // Éclairage cuit : rampes plafond (couleur + intensité). La modulation des façades a été
     // RETIRÉE (elle créait des pans pâles à frontière nette entre baies voisines) : l'éclairage
     // rythmé est porté par les rampes, les faisceaux et les pools cuits dans le sol.
-    rampMat.color.setScalar(0.75 + 1.5*config.ramp);           // blanc chaud -> le bloom fait le halo
+    // Emissivite plafonnee (~1.17 a ramp=1) : au-dela, la rampe la plus proche (vue de
+    // dessous, grande a l'ecran) sature le bloom en boule blanche eblouissante.
+    rampMat.color.setScalar(0.72 + 0.45*config.ramp);
     // Atmosphère (tâche 7) : faisceaux volumétriques faux + poussière.
-    shaftMat.uniforms.uOpacity.value = 0.20 * config.shaft;
+    // 0.14 : depuis le fondu de Fresnel, l'energie du faisceau se concentre face camera ;
+    // a 0.20 le cumul rampe + faisceau + bloom eblouit au passage sous un neon.
+    shaftMat.uniforms.uOpacity.value = 0.14 * config.shaft;
     dustMat.uniforms.uDust.value = config.dust;
     // Miroir : les instances miroir sont en seconde moitié -> on tronque via im.count (pas de mirrorGroup).
     const N = slots.length;
