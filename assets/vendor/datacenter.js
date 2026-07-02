@@ -1,6 +1,7 @@
 /* Datacenter 3D - moteur (adapté du design "Datacenter 3D.html").
-   Boucle INFINIE SANS SAUT : chaque baie est recyclée individuellement vers le
-   fond (dans le brouillard) -> plus de "remise à zéro" visible.
+   Monde STATIQUE (2 périodes de tunnel identiques, immuable après construction) :
+   c'est la caméra qui avance et se téléporte en arrière d'une période (TUNNEL)
+   -> boucle infinie invisible car la scène est exactement périodique.
    Three.js auto-hébergé (importmap local) => CSP-safe.
    Config par défaut = réglages validés ; surcharge via window.DC_CONFIG.
    Panneau de réglage optionnel via window.DC_PANEL. */
@@ -59,7 +60,8 @@ if (renderer) {
 
   const ROWS = 34, SPACING = 2.4, RACK_X = 2.45, RACK_W = 1.45, RACK_H = 4.1, RACK_Z = 2.05;
   const FACE_X = RACK_X - RACK_W / 2;
-  const Z0 = 4, Z_CAM = 2.0, NEAR_WRAP = Z0 + 0.5, TUNNEL = ROWS * SPACING;
+  const PERIODS = 2;
+  const Z0 = 4, Z_CAM = 2.0, TUNNEL = ROWS * SPACING;
 
   const worldGroup = new THREE.Group(); scene.add(worldGroup);
   let units = [];
@@ -86,7 +88,6 @@ if (renderer) {
   const handleGeo = new THREE.BoxGeometry(0.05, RACK_H*0.32, 0.10);
   const handleMat = new THREE.MeshStandardMaterial({ color: 0x04050a, roughness: 0.35, metalness: 0.6 });
   const faceGeo = new THREE.PlaneGeometry(RACK_Z*0.97, RACK_H*0.992);
-  const pickF = mulberry32(777);
 
   const ledMat = new THREE.ShaderMaterial({
     uniforms: { uTime:{value:0}, uSize:{value:config.ledSize}, uHeight:{value:600}, uBlink:{value:config.blink}, uMaxSize:{value:16}, uFog:{value:config.fog}, uFogColor:{value:new THREE.Color(config.bg)} },
@@ -118,27 +119,32 @@ if (renderer) {
   function buildStatics(){
     const dprF = pixRatio();
     for(let side=-1; side<=1; side+=2){
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.18,ROWS*SPACING), new THREE.MeshStandardMaterial({ color:0x0a0b10, roughness:0.8, metalness:0.6 }));
-      rail.position.set(side*1.5, RACK_H+0.45, Z0-ROWS*SPACING/2); worldGroup.add(rail);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.18,PERIODS*TUNNEL+24), new THREE.MeshStandardMaterial({ color:0x0a0b10, roughness:0.8, metalness:0.6 }));
+      rail.position.set(side*1.5, RACK_H+0.45, Z0-PERIODS*TUNNEL/2); worldGroup.add(rail);
     }
-    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(14, ROWS*SPACING+24), new THREE.MeshStandardMaterial({ color:0x070809, roughness:0.95, metalness:0.2 }));
-    ceil.rotation.x = Math.PI/2; ceil.position.set(0, RACK_H+1.15, Z0-ROWS*SPACING/2); worldGroup.add(ceil);
-    const mirror = new Reflector(new THREE.PlaneGeometry(14, ROWS*SPACING+24), { color:0x8b939d, textureWidth:1024*dprF, textureHeight:1024*dprF, clipBias:0.003 });
-    mirror.rotation.x = -Math.PI/2; mirror.position.set(0,0,Z0-ROWS*SPACING/2); worldGroup.add(mirror);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, ROWS*SPACING+24), new THREE.MeshStandardMaterial({ color:0x04060a, roughness:0.2, metalness:0.55, transparent:true, opacity:0.34 }));
-    floor.rotation.x = -Math.PI/2; floor.position.set(0,0.002,Z0-ROWS*SPACING/2); worldGroup.add(floor);
+    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(14, PERIODS*TUNNEL+24), new THREE.MeshStandardMaterial({ color:0x070809, roughness:0.95, metalness:0.2 }));
+    ceil.rotation.x = Math.PI/2; ceil.position.set(0, RACK_H+1.15, Z0-PERIODS*TUNNEL/2); worldGroup.add(ceil);
+    const mirror = new Reflector(new THREE.PlaneGeometry(14, PERIODS*TUNNEL+24), { color:0x8b939d, textureWidth:1024*dprF, textureHeight:1024*dprF, clipBias:0.003 });
+    mirror.rotation.x = -Math.PI/2; mirror.position.set(0,0,Z0-PERIODS*TUNNEL/2); worldGroup.add(mirror);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, PERIODS*TUNNEL+24), new THREE.MeshStandardMaterial({ color:0x04060a, roughness:0.2, metalness:0.55, transparent:true, opacity:0.34 }));
+    floor.rotation.x = -Math.PI/2; floor.position.set(0,0.002,Z0-PERIODS*TUNNEL/2); worldGroup.add(floor);
   }
 
   function buildRacks(){
-    for(let side=-1; side<=1; side+=2){
-      for(let r=0; r<ROWS; r++){
-        const zc = Z0 - r*SPACING - SPACING/2;
-        const u = new THREE.Group(); u.position.set(0,0,zc); u.userData = { side, r };
-        const m = new THREE.Mesh(rackGeo, rackMat); m.position.set(side*RACK_X, RACK_H/2+0.05, 0); u.add(m);
-        const faceMat = (pickF()<0.22) ? meshMats[Math.floor(pickF()*meshMats.length)] : serverMats[Math.floor(pickF()*serverMats.length)];
-        const f = new THREE.Mesh(faceGeo, faceMat); f.position.set(side*(FACE_X-0.02), RACK_H/2+0.05, 0); f.rotation.y = -side*Math.PI/2; u.add(f);
-        const handle = new THREE.Mesh(handleGeo, handleMat); handle.position.set(side*(FACE_X-0.06), RACK_H*0.5, (pickF()<0.5?-RACK_Z*0.40:RACK_Z*0.40)); u.add(handle);
-        units.push(u); worldGroup.add(u);
+    for(let p=0; p<PERIODS; p++){
+      for(let side=-1; side<=1; side+=2){
+        for(let r=0; r<ROWS; r++){
+          const zc = Z0 - p*TUNNEL - r*SPACING - SPACING/2;
+          const u = new THREE.Group(); u.position.set(0,0,zc); u.userData = { side, r };
+          const m = new THREE.Mesh(rackGeo, rackMat); m.position.set(side*RACK_X, RACK_H/2+0.05, 0); u.add(m);
+          // Sélection déterministe par (side, r) uniquement : jamais par p ni par l'ordre d'appel,
+          // sinon les deux périodes divergeraient et le wrap deviendrait visible.
+          const rndF = mulberry32(((r*73856093) ^ (side===1?19349663:97)) >>> 0);
+          const faceMat = (rndF()<0.22) ? meshMats[Math.floor(rndF()*meshMats.length)] : serverMats[Math.floor(rndF()*serverMats.length)];
+          const f = new THREE.Mesh(faceGeo, faceMat); f.position.set(side*(FACE_X-0.02), RACK_H/2+0.05, 0); f.rotation.y = -side*Math.PI/2; u.add(f);
+          const handle = new THREE.Mesh(handleGeo, handleMat); handle.position.set(side*(FACE_X-0.06), RACK_H*0.5, (rndF()<0.5?-RACK_Z*0.40:RACK_Z*0.40)); u.add(handle);
+          units.push(u); worldGroup.add(u);
+        }
       }
     }
   }
@@ -202,6 +208,7 @@ if (renderer) {
     document.body.style.background = config.bg;
   }
 
+  let camZ = Z_CAM;
   const t0 = performance.now();
   const FRAME_MS = 1000 / 30;   // ~30 fps : ~5x moins de charge GPU, invisible sur un fond lent
   let raf = 0, last = 0;
@@ -213,9 +220,10 @@ if (renderer) {
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016); last = now;
     const time = (now-t0)/1000;
     ledMat.uniforms.uTime.value = time;
-    for(const u of units){ u.position.z += config.camSpeed*dt; if(u.position.z > NEAR_WRAP) u.position.z -= TUNNEL; }
-    camera.position.set(Math.sin(time*0.12)*0.10, 1.5+Math.sin(time*0.1)*0.04, Z_CAM);
-    camera.lookAt(Math.sin(time*0.05)*0.15, 0.55, Z_CAM-12);
+    camZ -= config.camSpeed*dt;
+    if (camZ < Z_CAM - TUNNEL) camZ += TUNNEL;
+    camera.position.set(Math.sin(time*0.12)*0.10, 1.5+Math.sin(time*0.1)*0.04, camZ);
+    camera.lookAt(Math.sin(time*0.05)*0.15, 0.55, camZ-12);
     const tA = performance.now();
     composer.render();
     stats.ms += (performance.now() - tA) * 0.05 - stats.ms * 0.05;   // EMA
