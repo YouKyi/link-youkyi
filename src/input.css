@@ -82,8 +82,14 @@ html.da-premium .link-card-featured:hover {
 }
 
 /* ---- Fond Datacenter 3D : couches plein écran (CSS, pas de style inline -> CSP) ---- */
-.scene-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 0; display: block; }
-.scene-veil { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+/* Poster statique : visible immédiatement (avant chargement de Three.js), sous le canvas. */
+.scene-poster { position: fixed; inset: 0; z-index: 0; background-color: #04060a;
+  background-position: center; background-size: cover; background-repeat: no-repeat; }
+.scene-poster.has-img { background-image: url('/assets/poster.webp'); }
+.scene-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 0; display: block;
+  opacity: 0; transition: opacity 1.4s ease; }
+.scene-canvas.ready { opacity: 1; }
+.scene-veil { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(70% 64% at 50% 48%, rgba(11,7,18,.30) 0%, rgba(11,7,18,.13) 44%, rgba(11,7,18,0) 74%); }
 .scene-vignette { position: fixed; inset: 0; z-index: 2; pointer-events: none;
   background: radial-gradient(120% 100% at 50% 42%, rgba(0,0,0,0) 52%, rgba(0,0,0,0.45) 82%, rgba(0,0,0,0.8) 100%); }
 

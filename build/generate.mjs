@@ -17,7 +17,9 @@ const VARIANTS = ['link', 'pro'];
 const copyCssOnly = process.argv.includes('--copy-css');
 
 // Réglages validés du fond Datacenter 3D (surchargés par cfg.dc si présent dans une config).
-const FROZEN_DC = { camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045, glow: 1.20, fog: 0.025, veil: 0.32, palette: 'violet', bg: '#0B0712' };
+const FROZEN_DC = { camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045, glow: 1.20,
+  fog: 0.025, veil: 0.32, palette: 'violet', bg: '#0B0712',
+  mirror: 1, ramp: 1.0, shaft: 0.5, dust: 0.5, traffic: 0.6, screens: 1.0 };
 
 const layoutTpl = readFileSync(join(root, 'src/templates/layout.html'), 'utf8');
 const errorTpl = readFileSync(join(root, 'src/templates/error.html'), 'utf8');
@@ -64,7 +66,7 @@ function renderLink(link) {
             </a>`;
 }
 
-function buildMap(cfg) {
+function buildMap(cfg, name) {
   const ogImageAbs = cfg.ogImage ? cfg.ogUrl.replace(/\/$/, '') + cfg.ogImage : '';
   return {
     LANG: cfg.lang || 'fr',
@@ -83,13 +85,14 @@ function buildMap(cfg) {
     NAV_LABEL: escapeHtml(`Liens ${cfg.name}`),
     DC_CONFIG: JSON.stringify(cfg.dc || FROZEN_DC),
     DA_CLASS: cfg.accent === 'premium' ? 'da-premium' : '',
+    POSTER_CLASS: existsSync(join(root, 'assets', `poster-${cfg.variant || name}.webp`)) ? 'has-img' : '',
     LINKS: cfg.links.map(renderLink).join('\n'),
   };
 }
 
 const fill = (tpl, map) => tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => (k in map ? map[k] : ''));
 
-function copyAssets(cfg, assetsDir) {
+function copyAssets(cfg, assetsDir, name) {
   mkdirSync(assetsDir, { recursive: true });
   // Avatar local
   if (cfg.avatar && cfg.avatar.startsWith('/assets/')) {
@@ -97,6 +100,9 @@ function copyAssets(cfg, assetsDir) {
     const src = join(root, 'assets', file);
     if (existsSync(src)) copyFileSync(src, join(assetsDir, file));
   }
+  // Poster statique (généré manuellement via le tuner ; absent = pas de copie, {{POSTER_CLASS}} vide)
+  const poster = join(root, 'assets', `poster-${cfg.variant || name}.webp`);
+  if (existsSync(poster)) copyFileSync(poster, join(assetsDir, 'poster.webp'));
   // CSS compilé (présent seulement après le build Tailwind)
   const css = join(root, 'assets', 'tailwind.css');
   if (existsSync(css)) copyFileSync(css, join(assetsDir, 'tailwind.css'));
@@ -115,15 +121,15 @@ for (const name of VARIANTS) {
   const assetsDir = join(outDir, 'assets');
 
   if (copyCssOnly) {
-    copyAssets(cfg, assetsDir);
+    copyAssets(cfg, assetsDir, name);
     continue;
   }
 
-  const map = buildMap(cfg);
+  const map = buildMap(cfg, name);
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, 'index.html'), fill(layoutTpl, map));
   writeFileSync(join(outDir, '404.html'), fill(errorTpl, map));
-  copyAssets(cfg, assetsDir);
+  copyAssets(cfg, assetsDir, name);
 }
 
 console.log(copyCssOnly ? 'Assets copiés dans apps/*.' : `Apps générées : ${VARIANTS.join(', ')}.`);

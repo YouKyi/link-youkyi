@@ -18,7 +18,8 @@ src/templates/          layout.html (page) + error.html (404), avec {{placeholde
 src/input.css           Tailwind source : cartes verre, classes de scène, avatar, 404
 tailwind.config.js      Palette `brand`, content -> apps/ + templates
 build/generate.mjs      Générateur (ESM, zéro dépendance) + réglages du fond (FROZEN_DC)
-assets/                 Avatars (logo-youkyi.png, alexandre.jpg) + vendor/ (Three.js + datacenter.js)
+assets/                 Avatars (logo-youkyi.png, alexandre.jpg) + poster-<variant>.webp (optionnels)
+                        + vendor/ (Three.js + moteur du fond : datacenter.js, dc-textures.js, dc-panel.js)
 apps/                   SORTIE GÉNÉRÉE (gitignorée) : apps/link, apps/pro
 vercel.json             cleanUrls + en-têtes de sécurité (CSP, HSTS…) partagés
 ```
@@ -27,9 +28,9 @@ vercel.json             cleanUrls + en-têtes de sécurité (CSP, HSTS…) parta
 
 ## Le fond Datacenter 3D
 
-- Moteur : `assets/vendor/datacenter.js` (adapté d'un design Claude). Allée de datacenter infinie : baies de serveurs texturées, rangées de LED clignotantes (shader), bloom, sol réfléchissant, brouillard. **Boucle infinie sans saut** (chaque baie est recyclée individuellement vers le fond). Voile + vignette pour la lisibilité du texte. **Fallback** : fond sombre simple si pas de WebGL.
+- Moteur en 3 modules ESM sous `assets/vendor/` : `datacenter.js` (scène, boucle, config), `dc-textures.js` (textures procédurales : atlas de façades, sol, écrans de logs), `dc-panel.js` (panneau du tuner, chargé seulement si `window.DC_PANEL`). Monde **statique** (2 périodes de tunnel identiques, instances `InstancedMesh`) : la boucle infinie vient du **wrap de la caméra**, sans saut. Reflet au sol via une seconde moitié d'instances (pas de `Reflector`), rampes/faisceaux/poussière/écrans de logs pour l'ambiance. Voile + vignette pour la lisibilité du texte. **Fallback** : fond sombre simple si pas de WebGL, ou poster statique (`assets/poster-<variant>.webp`) tant que le moteur n'a pas démarré (jamais en `prefers-reduced-motion`).
 - Three.js est **auto-hébergé** (`assets/vendor/three/…`) via un importmap local : aucun CDN, la CSP stricte (`script-src 'self'`) est respectée.
-- Réglages : la config validée vit dans `FROZEN_DC` (`build/generate.mjs`) et est injectée en `window.DC_CONFIG`. Pour ré-explorer un réglage, ouvrir une page avec `window.DC_PANEL = true` (panneau live + « Copier la config »).
+- Réglages : la config validée vit dans `FROZEN_DC` (`build/generate.mjs`) et est injectée en `window.DC_CONFIG`. Pour ré-explorer un réglage, ouvrir une page avec `window.DC_PANEL = true` (panneau live + « Copier la config » + « 📷 Poster »).
 
 ## Modifier le contenu
 

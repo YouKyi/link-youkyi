@@ -1,23 +1,28 @@
 /* Datacenter 3D - moteur (adapté du design "Datacenter 3D.html").
-   Boucle INFINIE SANS SAUT : chaque baie est recyclée individuellement vers le
-   fond (dans le brouillard) -> plus de "remise à zéro" visible.
+   Monde STATIQUE (2 périodes de tunnel identiques, immuable après construction) :
+   c'est la caméra qui avance et se téléporte en arrière d'une période (TUNNEL)
+   -> boucle infinie invisible car la scène est exactement périodique.
    Three.js auto-hébergé (importmap local) => CSP-safe.
    Config par défaut = réglages validés ; surcharge via window.DC_CONFIG.
    Panneau de réglage optionnel via window.DC_PANEL. */
 import * as THREE from 'three';
+
+// Identifiant de build, affiché dans le panneau du tuner : permet de vérifier
+// d'un coup d'oeil que le navigateur n'exécute pas une version en cache.
+const DC_BUILD = 'b11-neons-calmes';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { Reflector } from 'three/addons/objects/Reflector.js';
+import { mulberry32, makeFacadeAtlas, makeFloorTexture, makeGlowTexture, makeLogTexture, makeTrayTexture } from './dc-textures.js';
 
 const DEFAULTS = {
   camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045,
   glow: 1.20, fog: 0.025, veil: 0.32, palette: 'datacenter',
-  bg: '#04060a', theme: 'dark'
+  bg: '#04060a', theme: 'dark', mirror: 1, ramp: 1.0,
+  shaft: 0.5, dust: 0.5, screens: 1.0, traffic: 0.6
 };
 let config = Object.assign({}, DEFAULTS, (window.DC_CONFIG || {}));
 
-function mulberry32(s){ return function(){ s|=0; s=(s+0x6D2B79F5)|0; let t=Math.imul(s^(s>>>15),1|s); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
 let seed = Math.floor(Math.random()*1e9);
 function hexToRgba(hex,a){ let h=hex.replace('#',''); if(h.length===3)h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
 
@@ -59,10 +64,17 @@ if (renderer) {
 
   const ROWS = 34, SPACING = 2.4, RACK_X = 2.45, RACK_W = 1.45, RACK_H = 4.1, RACK_Z = 2.05;
   const FACE_X = RACK_X - RACK_W / 2;
-  const Z0 = 4, Z_CAM = 2.0, NEAR_WRAP = Z0 + 0.5, TUNNEL = ROWS * SPACING;
+  const PERIODS = 2;
+  const Z0 = 4, Z_CAM = 2.0, TUNNEL = ROWS * SPACING;
+  const RAMP_SPACING = SPACING*2, RAMP_Z0 = Z0 - 1.2;   // pas des rampes plafond ; RAMP_Z0 = phase de tout l'éclairage cuit
 
   const worldGroup = new THREE.Group(); scene.add(worldGroup);
-  let units = [];
+
+  // Baies instanciées : ~4 InstancedMesh au lieu de 272 Groups. Le miroir (sous le sol) n'est plus
+  // un Group cloné (scale.y = -1) mais la seconde moitié des instances -> encore une passe, moins d'objets.
+  const FACE_RECESS = 0.10;          // renfoncement de la façade dans le caisson
+  let slots = [], casesIM, facesIM, pillarsIM, rampsIM, rampMat, NRAMP, ledPoints = null, ledMirror = -1;
+  let shaftMat, dustMat, endGlow = null;
 
   const PALETTES = {
     green: [[128,0.95,0.58,9],[118,0.92,0.54,4],[140,0.85,0.56,2],[150,0.8,0.6,1.5],[212,0.95,0.62,2.2],[225,0.9,0.64,1.2]],
@@ -79,95 +91,58 @@ if (renderer) {
   };
   function pickColor(rnd, pal){ let tot=0; for(const p of pal)tot+=p[3]; let r=rnd()*tot; for(const p of pal){ r-=p[3]; if(r<=0)return p; } return pal[0]; }
 
-  function drawScrew(x, cx, cy){ x.fillStyle='#05060a'; x.beginPath(); x.arc(cx,cy,3,0,6.2831); x.fill(); x.strokeStyle='rgba(255,255,255,0.12)'; x.lineWidth=1; x.beginPath(); x.arc(cx,cy,3,-2.4,-0.6); x.stroke(); }
-  function drawUnit(x, ox, oy, w, h, rnd){
-    const g=x.createLinearGradient(0,oy,0,oy+h); g.addColorStop(0,'#191d23'); g.addColorStop(0.12,'#12151a'); g.addColorStop(0.5,'#0d1014'); g.addColorStop(1,'#070a0d');
-    x.fillStyle=g; x.fillRect(ox,oy,w,h);
-    for(let i=0;i<w;i+=2){ x.fillStyle='rgba(255,255,255,'+(0.004+rnd()*0.008).toFixed(3)+')'; x.fillRect(ox+i,oy+2,1,h-4); }
-    x.fillStyle='rgba(255,255,255,0.08)'; x.fillRect(ox,oy,w,1.5);
-    x.fillStyle='rgba(0,0,0,0.8)'; x.fillRect(ox,oy+h-1.5,w,1.5);
-    const cy=oy+h/2;
-    x.fillStyle='#0c0e13'; x.fillRect(ox,oy+1,16,h-2); x.fillRect(ox+w-16,oy+1,16,h-2);
-    x.fillStyle='rgba(255,255,255,0.06)'; x.fillRect(ox+16,oy+1,1,h-2); x.fillRect(ox+w-17,oy+1,1,h-2);
-    drawScrew(x,ox+8,oy+8); drawScrew(x,ox+8,oy+h-8); drawScrew(x,ox+w-8,oy+8); drawScrew(x,ox+w-8,oy+h-8);
-    const type=rnd();
-    if(type<0.14){
-      x.fillStyle='rgba(90,120,170,0.14)'; x.fillRect(ox+20,cy-2,w-80,4);
-      const lw=Math.min(46,w*0.18);
-      x.fillStyle='#0a1622'; x.fillRect(ox+24,cy-Math.min(8,h/3),lw,Math.min(16,h-8));
-      x.fillStyle='rgba(70,160,220,0.55)'; x.fillRect(ox+27,cy-Math.min(5,h/4),lw-6,2);
-      x.fillStyle='rgba(70,160,220,0.3)'; x.fillRect(ox+27,cy-1,lw-10,2);
-      x.strokeStyle='#454c57'; x.lineWidth=1.5; x.beginPath(); x.arc(ox+w-30,cy,4,0,6.2831); x.stroke();
-      x.fillStyle=rnd()<0.6?'#39ff9a':'#37c0ff'; x.beginPath(); x.arc(ox+w-30,cy,1.6,0,6.2831); x.fill();
-    } else {
-      const gx=ox+22, ventW=w*0.26;
-      x.fillStyle='#0b0d12'; x.fillRect(gx,oy+4,ventW,h-8);
-      for(let yy=oy+7; yy<oy+h-5; yy+=3.4) for(let xx=gx+2; xx<gx+ventW-2; xx+=3.4){ x.fillStyle='rgba(120,140,170,0.10)'; x.beginPath(); x.arc(xx+(Math.floor((yy-oy)/3.4)%2)*1.7,yy,1.0,0,6.2831); x.fill(); }
-      if(type<0.52){
-        let dx=gx+ventW+8; const bays=3+Math.floor(rnd()*5); const bw=11, bh=Math.min(h-7,22);
-        for(let b=0;b<bays&&dx+bw<ox+w-30;b++){
-          const bg=x.createLinearGradient(dx,0,dx+bw,0); bg.addColorStop(0,'#1c2129'); bg.addColorStop(1,'#0c0e13');
-          x.fillStyle=bg; x.fillRect(dx,cy-bh/2,bw,bh);
-          x.strokeStyle='#3a4250'; x.lineWidth=1; x.strokeRect(dx+0.5,cy-bh/2+0.5,bw-1,bh-1);
-          x.fillStyle='#05070b'; x.fillRect(dx+2,cy-bh/2+3,bw-4,3);
-          x.fillStyle=rnd()<0.75?'#39ff9a':(rnd()<0.5?'#ffcf4d':'#37c0ff'); x.fillRect(dx+bw-3.5,cy+bh/2-6,2.5,3);
-          dx+=bw+3;
-        }
-      } else {
-        let px=gx+ventW+8; const nP=4+Math.floor(rnd()*6); const pw=12, gap=3; const rows=h>26?2:1;
-        for(let p=0;p<nP&&px+pw<ox+w-30;p++){
-          for(let rr=0;rr<rows;rr++){
-            const py=rows===2?cy-10+rr*18:cy-7;
-            x.fillStyle='#05060a'; x.fillRect(px,py,pw,13);
-            x.strokeStyle='#3a4250'; x.lineWidth=1; x.strokeRect(px+0.5,py+0.5,pw-1,12);
-            x.fillStyle='#0c0f15'; x.fillRect(px+2,py+3,pw-4,7);
-            x.fillStyle=rnd()<0.55?'#39ff9a':'#ffcf4d'; x.fillRect(px+1.5,py+1,2.5,2);
-          }
-          px+=pw+gap;
-        }
-      }
-    }
-    x.fillStyle='#2c323d'; x.fillRect(ox+w-26,oy+4,18,Math.min(7,h-8));
-    x.fillStyle='#11151b'; for(let bi=0;bi<7;bi++) x.fillRect(ox+w-24+bi*2,oy+5,rnd()<0.5?1:0.6,Math.min(5,h-10));
-    const ny=1+Math.floor(rnd()*3);
-    for(let k=0;k<ny;k++){ const cc=['#39ff9a','#37c0ff','#ffffff','#ffcf4d','#ff5b5b'][Math.floor(rnd()*5)]; x.fillStyle=cc; x.globalAlpha=0.6+rnd()*0.4; x.fillRect(ox+w-24,oy+h-6-k*4,3,2.5); }
-    x.globalAlpha=1;
-  }
-  function makeRackTexture(sd){
-    const rnd=mulberry32(sd); const W=512,H=1024; const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
-    const bg=x.createLinearGradient(0,0,W,0); bg.addColorStop(0,'#0b0d12'); bg.addColorStop(0.5,'#0f1217'); bg.addColorStop(1,'#090b10'); x.fillStyle=bg; x.fillRect(0,0,W,H);
-    for(let yy=22;yy<H-22;yy+=7) for(let xx=42;xx<W-42;xx+=7){ x.fillStyle='rgba(0,0,0,0.6)'; x.beginPath(); x.arc(xx,yy,1.5,0,6.2831); x.fill(); x.fillStyle='rgba(150,170,200,0.05)'; x.fillRect(xx-1,yy-1,1,1); }
-    let g1=x.createLinearGradient(0,0,34,0); g1.addColorStop(0,'#30353d'); g1.addColorStop(1,'#13161b'); x.fillStyle=g1; x.fillRect(0,0,30,H);
-    let g2=x.createLinearGradient(W-34,0,W,0); g2.addColorStop(0,'#13161b'); g2.addColorStop(1,'#30353d'); x.fillStyle=g2; x.fillRect(W-30,0,30,H);
-    for(let s=1;s<3;s++){ const yy=H*s/3; x.fillStyle='rgba(0,0,0,0.65)'; x.fillRect(30,yy-1,W-60,2); x.fillStyle='rgba(255,255,255,0.05)'; x.fillRect(30,yy+1,W-60,1); }
-    const hx=rnd()<0.5?52:W-62; x.fillStyle='#20242b'; x.fillRect(hx,H*0.4,10,H*0.2); x.fillStyle='rgba(255,255,255,0.10)'; x.fillRect(hx,H*0.4,2,H*0.2);
-    const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=16; return t;
-  }
-  function makeServerTexture(sd){
-    const rnd=mulberry32(sd); const W=512,H=1024; const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
-    x.fillStyle='#06080b'; x.fillRect(0,0,W,H);
-    let g1=x.createLinearGradient(0,0,28,0); g1.addColorStop(0,'#23272e'); g1.addColorStop(1,'#0c0e12'); x.fillStyle=g1; x.fillRect(0,0,26,H);
-    let g2=x.createLinearGradient(W-28,0,W,0); g2.addColorStop(0,'#14171c'); g2.addColorStop(1,'#363c45'); x.fillStyle=g2; x.fillRect(W-26,0,26,H);
-    for(let yy=16;yy<H;yy+=46){ drawScrew(x,12,yy); drawScrew(x,W-12,yy); }
-    let y=8; while(y<H-8){ const uH=(rnd()<0.16)?(26+rnd()*10):(40+rnd()*60); drawUnit(x,30,y,W-60,Math.min(uH,H-8-y),rnd); y+=uH+3; }
-    const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=16; return t;
-  }
-
-  const rackMat = new THREE.MeshStandardMaterial({ color: 0x060709, roughness: 0.5, metalness: 0.85 });
+  // side: DoubleSide partout car les instances miroir ont un scale.y = -1 (culling inversé).
+  const rackMat = new THREE.MeshStandardMaterial({ color: 0x060709, roughness: 0.5, metalness: 0.85, side: THREE.DoubleSide });
   const rackGeo = new THREE.BoxGeometry(RACK_W, RACK_H, RACK_Z);
-  const meshMats = []; for(let i=0;i<3;i++){ const tex=makeRackTexture(1000+i*137); meshMats.push(new THREE.MeshStandardMaterial({ map:tex, emissive:0xc79fff, emissiveMap:tex, emissiveIntensity:0.12, roughness:0.62, metalness:0.5 })); }
-  const serverMats = []; for(let i=0;i<3;i++){ const tex=makeServerTexture(2000+i*211); serverMats.push(new THREE.MeshStandardMaterial({ map:tex, emissive:0xc79fff, emissiveMap:tex, emissiveIntensity:0.14, roughness:0.58, metalness:0.45 })); }
-  const handleGeo = new THREE.BoxGeometry(0.05, RACK_H*0.32, 0.10);
-  const handleMat = new THREE.MeshStandardMaterial({ color: 0x04050a, roughness: 0.35, metalness: 0.6 });
   const faceGeo = new THREE.PlaneGeometry(RACK_Z*0.97, RACK_H*0.992);
-  const pickF = mulberry32(777);
+  // Montants avant : metal sombre mais LISIBLE (emissive legere), sinon ils apparaissent
+  // comme des pans noirs a bord net sur les facades voisines en angle rasant.
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x232833, roughness: 0.5, metalness: 0.65,
+    emissive: 0x14161f, emissiveIntensity: 0.5, side: THREE.DoubleSide });
+
+  // Atlas de façades (8 tuiles, grille 4x2) -> un seul ShaderMaterial remplace les 6 MeshStandardMaterial + textures.
+  // Texture construite dans start() (canvas lourd, 100 % gaspillé sous reduced-motion) : uAtlas initialisé à null.
+  const faceMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uAtlas: { value: null },
+      uTileScale: { value: new THREE.Vector2(1/4, 1/2) },
+      uBright: { value: 1.0 },
+      uFogColor: { value: new THREE.Color(config.bg) },
+      uFogDensity: { value: config.fog },
+    },
+    // three r160 : pour un ShaderMaterial rendu par un InstancedMesh, three declare deja
+    // `attribute mat4 instanceMatrix;` (prefixe USE_INSTANCING). On ne le redeclare donc PAS ici
+    // (une double declaration serait une erreur GLSL) ; on l'utilise directement dans main().
+    vertexShader: `
+      attribute vec2 aTile;
+      varying vec2 vUv; varying vec2 vTile; varying float vDist;
+      void main(){
+        vUv = uv; vTile = aTile;
+        vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+        vec4 mv = viewMatrix * wp;
+        vDist = -mv.z;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform sampler2D uAtlas; uniform vec2 uTileScale;
+      uniform float uBright, uFogDensity;
+      uniform vec3 uFogColor;
+      varying vec2 vUv; varying vec2 vTile; varying float vDist;
+      void main(){
+        vec3 tex = texture2D(uAtlas, vUv * uTileScale + vTile).rgb;
+        vec3 col = tex * uBright;
+        float f = 1.0 - exp(-uFogDensity*uFogDensity*vDist*vDist);
+        gl_FragColor = vec4(mix(col, uFogColor, clamp(f,0.0,1.0)), 1.0);
+      }`,
+    side: THREE.DoubleSide,
+  });
 
   const ledMat = new THREE.ShaderMaterial({
-    uniforms: { uTime:{value:0}, uSize:{value:config.ledSize}, uHeight:{value:600}, uBlink:{value:config.blink}, uMaxSize:{value:16}, uFog:{value:config.fog}, uFogColor:{value:new THREE.Color(config.bg)} },
+    uniforms: { uTime:{value:0}, uSize:{value:config.ledSize}, uHeight:{value:600}, uBlink:{value:config.blink}, uMaxSize:{value:16}, uFog:{value:config.fog}, uFogColor:{value:new THREE.Color(config.bg)}, uTraffic:{value:config.traffic} },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     vertexShader: `
-      attribute vec3 aColor; attribute float aPhase; attribute float aRate; attribute float aBase;
-      uniform float uTime, uSize, uHeight, uBlink, uMaxSize;
+      attribute vec3 aColor; attribute float aPhase; attribute float aRate; attribute float aBase; attribute float aTr;
+      uniform float uTime, uSize, uHeight, uBlink, uMaxSize, uTraffic;
       varying vec3 vColor; varying float vB;
       void main(){
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -175,7 +150,10 @@ if (renderer) {
         gl_Position = projectionMatrix * mv;
         gl_PointSize = min(uMaxSize, uSize * uHeight / max(dist, 0.1));
         float blink = 0.5 + 0.5 * sin(uTime * uBlink * aRate + aPhase * 6.2831);
+        float slot2 = floor(uTime*(1.5 + aRate*2.0) + aPhase*97.0);
+        float burst = step(0.86, fract(sin(slot2*12.9898 + aPhase*78.233)*43758.5453));
         float b = aBase * mix(0.9, blink, step(0.12, aRate));
+        b = mix(b, aBase*(0.25 + 1.05*burst), aTr*uTraffic);
         vColor = aColor; vB = clamp(b, 0.0, 1.4);
       }
     `,
@@ -189,31 +167,258 @@ if (renderer) {
     `
   });
 
-  function buildStatics(){
-    const dprF = pixRatio();
-    for(let side=-1; side<=1; side+=2){
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.18,ROWS*SPACING), new THREE.MeshStandardMaterial({ color:0x0a0b10, roughness:0.8, metalness:0.6 }));
-      rail.position.set(side*1.5, RACK_H+0.45, Z0-ROWS*SPACING/2); worldGroup.add(rail);
+  // Écrans instanciés : petits moniteurs de logs semés sur les façades (une même sélection
+  // de rangées pour les deux périodes -> wrap invisible).
+  const screenGeo = new THREE.PlaneGeometry(0.62, 0.44);
+  const screenMat = new THREE.ShaderMaterial({
+    uniforms: { uMap:{value:null}, uTime:{value:0}, uSpeed:{value:config.screens} },   // uMap construit dans start()
+    side: THREE.DoubleSide,
+    vertexShader: `
+      attribute float aPhase;
+      // instanceMatrix est déclaré automatiquement par three r160 (ShaderMaterial + InstancedMesh)
+      varying vec2 vUv; varying float vPh;
+      void main(){
+        vUv = uv; vPh = aPhase;
+        gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform sampler2D uMap; uniform float uTime, uSpeed;
+      varying vec2 vUv; varying float vPh;
+      void main(){
+        vec2 uv = vec2(vUv.x, fract(vUv.y*0.5 + uTime*0.02*uSpeed + vPh));
+        vec3 col = texture2D(uMap, uv).rgb * 1.5;
+        float scan = 0.92 + 0.08*sin(vUv.y*240.0);
+        float edge = smoothstep(0.0,0.06,vUv.x)*smoothstep(1.0,0.94,vUv.x)
+                   * smoothstep(0.0,0.09,vUv.y)*smoothstep(1.0,0.91,vUv.y);
+        gl_FragColor = vec4(col*scan*edge + vec3(0.01,0.02,0.015), 1.0);
+      }`
+  });
+  function buildScreens(){
+    const scr = [];
+    for(const s of slots){
+      if (mulberry32((s.r*2654435761 ^ (s.side===1?7:11))>>>0)() < 0.14) scr.push(s);
     }
-    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(14, ROWS*SPACING+24), new THREE.MeshStandardMaterial({ color:0x070809, roughness:0.95, metalness:0.2 }));
-    ceil.rotation.x = Math.PI/2; ceil.position.set(0, RACK_H+1.15, Z0-ROWS*SPACING/2); worldGroup.add(ceil);
-    const mirror = new Reflector(new THREE.PlaneGeometry(14, ROWS*SPACING+24), { color:0x8b939d, textureWidth:1024*dprF, textureHeight:1024*dprF, clipBias:0.003 });
-    mirror.rotation.x = -Math.PI/2; mirror.position.set(0,0,Z0-ROWS*SPACING/2); worldGroup.add(mirror);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, ROWS*SPACING+24), new THREE.MeshStandardMaterial({ color:0x04060a, roughness:0.2, metalness:0.55, transparent:true, opacity:0.34 }));
-    floor.rotation.x = -Math.PI/2; floor.position.set(0,0.002,Z0-ROWS*SPACING/2); worldGroup.add(floor);
+    const screensIM = new THREE.InstancedMesh(screenGeo, screenMat, scr.length);
+    const ph = new Float32Array(scr.length);
+    scr.forEach((s, i) => {
+      const rnd = mulberry32((s.r*97 + 5)>>>0);
+      _qF.setFromAxisAngle(new THREE.Vector3(0,1,0), -s.side*Math.PI/2);
+      setInst(screensIM, i, s.side*(FACE_X - 0.035), 1.4 + rnd()*1.8, s.z + (rnd()-0.5)*0.8, _qF, 0);
+      ph[i] = rnd();
+    });
+    screensIM.geometry = screenGeo.clone();
+    screensIM.geometry.setAttribute('aPhase', new THREE.InstancedBufferAttribute(ph, 1));
+    screensIM.instanceMatrix.needsUpdate = true; screensIM.frustumCulled = false;
+    worldGroup.add(screensIM);
+  }
+
+  function buildStatics(){
+    // L et zC : étendue (Z) et centre du monde statique (2 périodes + marge) ; réutilisés par
+    // le sol, les rails/plafond ci-dessous et (tâche 7) le fond d'allée.
+    const L = PERIODS*TUNNEL + 24, zC = Z0 - PERIODS*TUNNEL/2;
+    // Chemins de câbles : plateau de tôle perforée (grillage) suspendu au plafond, avec 3 câbles
+    // qui y courent (remplace les 2 rails pleins de la tâche 3, trop nus pour un vrai datacenter).
+    const trayTex = makeTrayTexture();
+    trayTex.repeat.set(1, L/2);
+    const trayMat = new THREE.MeshStandardMaterial({ map: trayTex, color: 0xffffff,
+      roughness: 0.7, metalness: 0.6, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+    const cableColors = [0x241a38, 0x101018, 0x1e1030];
+    for(let side=-1; side<=1; side+=2){
+      const tray = new THREE.Mesh(new THREE.PlaneGeometry(0.55, L), trayMat);
+      tray.rotation.x = Math.PI/2; tray.position.set(side*1.45, RACK_H+0.5, zC);
+      worldGroup.add(tray);
+      for(let ci=0; ci<3; ci++){
+        const cbl = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, L, 6),
+          new THREE.MeshStandardMaterial({ color: cableColors[ci], roughness: 0.85 }));
+        cbl.rotation.x = Math.PI/2;
+        cbl.position.set(side*1.45 - 0.14 + ci*0.14, RACK_H+0.56, zC);
+        worldGroup.add(cbl);
+      }
+    }
+    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(14, L), new THREE.MeshStandardMaterial({ color:0x070809, roughness:0.95, metalness:0.2 }));
+    ceil.rotation.x = Math.PI/2; ceil.position.set(0, RACK_H+1.15, zC); worldGroup.add(ceil);
+
+    // Sol texturé (dalles + pools de lumière sous les rampes) : remplace l'ancien plan semi-
+    // transparent uni (opacité 0.62) de la tâche 3. Le miroir transparaît dans les 12 % restants
+    // et à travers les zones sombres de la texture.
+    const floorTex = makeFloorTexture();
+    floorTex.repeat.set(1, L/4.8);
+    // phase : le pool (centre de tuile) doit tomber sous RAMP_Z0 ; le plan est centré en zC.
+    // NOTE : sens visuel non vérifié ici (pas de navigateur) ; si le pool est décalé par rapport
+    // à la rampe au tuner, inverser le signe de cet offset (cf. brief tâche 6).
+    floorTex.offset.y = (((zC + L/2) - (RAMP_Z0 + 2.4)) / 4.8) % 1;
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, L),
+      new THREE.MeshBasicMaterial({ map: floorTex, transparent: true, opacity: 0.88, color: 0xffffff }));
+    floor.rotation.x = -Math.PI/2; floor.position.set(0, 0.002, zC); worldGroup.add(floor);
+
+    // Rampes plafond instanciées (et leur reflet sous le sol, seconde moitié des instances).
+    const rampGeo = new THREE.BoxGeometry(0.42, 0.05, 1.25);
+    rampMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    NRAMP = Math.round(PERIODS*TUNNEL/RAMP_SPACING);   // 34
+    rampsIM = new THREE.InstancedMesh(rampGeo, rampMat, NRAMP*2);
+    for(let k=0;k<NRAMP;k++){
+      const z = RAMP_Z0 - k*RAMP_SPACING;
+      setInst(rampsIM, k, 0, RACK_H + 1.02, z, null, 0);
+      setInst(rampsIM, k+NRAMP, 0, RACK_H + 1.02, z, null, 1);
+    }
+    rampsIM.instanceMatrix.needsUpdate = true; rampsIM.frustumCulled = false;
+    worldGroup.add(rampsIM);
+
+    // Fond d'allée : lueur caméra-relative, distance constante, fondue par le brouillard
+    // (périodicité du wrap préservée). Ajoutée à `scene` (pas `worldGroup`) et suivie dans animate().
+    const glowMat = new THREE.MeshBasicMaterial({ map: makeGlowTexture(), transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, color: 0x8f7ad9, opacity: 0.5 });
+    endGlow = new THREE.Mesh(new THREE.PlaneGeometry(9, 5), glowMat);
+    endGlow.position.set(0, 2.2, Z_CAM - 60); scene.add(endGlow);
+  }
+
+  function buildAtmosphere(){
+    // Faux faisceaux volumétriques : un cône sous chaque rampe, pointe en haut, base évasée.
+    // Fondu de Fresnel OBLIGATOIRE : sans lui, la silhouette du cône (vue de côté quand la
+    // caméra passe à ras) dessine une démarcation verticale nette et un voile laiteux
+    // asymétrique sur les baies. L'alpha tombe à zéro au bord (normale perpendiculaire à la
+    // vue) et culmine face caméra. Pas de miroir : aucun reflet utile sous le sol.
+    // FrontSide uniquement : en DoubleSide, passer sous un faisceau cumulait les deux parois
+    // du cône face caméra (plein écran) et, avec la rampe + le bloom, éblouissait tout.
+    const shaftGeo = new THREE.ConeGeometry(1.5, 3.4, 14, 1, true);   // ouvert, pointe en haut
+    shaftMat = new THREE.ShaderMaterial({
+      transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false, side: THREE.FrontSide,
+      uniforms: { uOpacity: { value: 0.10 }, uColor: { value: new THREE.Color(0xbcb3e8) } },
+      vertexShader: `
+        // instanceMatrix est déclaré automatiquement par three r160 (ShaderMaterial + InstancedMesh)
+        varying float vH; varying float vRim; varying float vDist;
+        void main(){
+          vH = uv.y;   // ConeGeometry : v = 1 à la pointe (haut), 0 à la base (bas)
+          vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+          vec3 n = normalize(mat3(modelMatrix * instanceMatrix) * normal);
+          vec3 v = normalize(cameraPosition - wp.xyz);
+          vRim = abs(dot(n, v));
+          vec4 mv = viewMatrix * wp;
+          vDist = -mv.z;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `
+        uniform float uOpacity; uniform vec3 uColor;
+        varying float vH; varying float vRim; varying float vDist;
+        void main(){
+          float rim = pow(clamp(vRim, 0.0, 1.0), 1.4);          // 0 au bord de silhouette
+          float grad = smoothstep(0.0, 0.9, vH);                 // lumineux près de la rampe
+          // Un faisceau ne se voit pas de l'intérieur : fondu total sous ~3 m pour ne
+          // jamais eblouir au passage sous le neon.
+          float nf = smoothstep(3.0, 8.0, vDist);
+          gl_FragColor = vec4(uColor, uOpacity * rim * grad * nf);
+        }`
+    });
+    const shaftsIM = new THREE.InstancedMesh(shaftGeo, shaftMat, NRAMP);   // pas de miroir
+    for(let k=0;k<NRAMP;k++) setInst(shaftsIM, k, 0, RACK_H + 1.02 - 1.7, RAMP_Z0 - k*RAMP_SPACING, null, 0);
+    shaftsIM.instanceMatrix.needsUpdate = true; shaftsIM.frustumCulled = false;
+    worldGroup.add(shaftsIM);
+
+    // Poussière flottante : shader autonome (aucune mise à jour CPU par particule), positionnée
+    // relative caméra (ajoutée à `scene`, pas à `worldGroup`) pour ne jamais « claquer » au wrap.
+    const DUST_N = 300, DUST_LEN = 30.0;
+    const dustGeo = new THREE.BufferGeometry();
+    {
+      const p = new Float32Array(DUST_N*3), sd = new Float32Array(DUST_N);
+      const rndD = mulberry32(4242);
+      for(let i=0;i<DUST_N;i++){
+        // concentrées vers le centre d'allée et la hauteur des shafts
+        p[i*3]   = (rndD()*2-1) * (0.6 + rndD()*1.4);
+        p[i*3+1] = 0.4 + rndD()*4.2;
+        p[i*3+2] = rndD()*DUST_LEN;                    // z de départ, replié par le shader
+        sd[i] = rndD();
+      }
+      dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(p,3));
+      dustGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(sd,1));
+    }
+    dustMat = new THREE.ShaderMaterial({
+      uniforms: { uTime:{value:0}, uCamZ:{value:Z_CAM}, uDust:{value:config.dust},
+                  uHeight:{value:600}, uRampSpacing:{value:RAMP_SPACING}, uRampZ0:{value:RAMP_Z0} },
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `
+        attribute float aSeed;
+        uniform float uTime, uCamZ, uDust, uHeight, uRampSpacing, uRampZ0;
+        varying float vA;
+        void main(){
+          vec3 p = position;
+          float z = mod(p.z + uTime*(0.18 + aSeed*0.15), 30.0);
+          p.z = uCamZ + 1.0 - z;
+          p.x += sin(uTime*0.30 + aSeed*40.0)*0.22;
+          p.y += sin(uTime*0.21 + aSeed*70.0)*0.15;
+          // plus visible sous les rampes (dans les shafts)
+          float d = (p.z - uRampZ0)/uRampSpacing;
+          float inShaft = 0.35 + 0.65*pow(0.5+0.5*cos(6.28318*d), 2.0);
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = min(5.0, 0.02*uHeight/max(-mv.z, 0.1));
+          float tw = 0.6 + 0.4*sin(uTime*(0.8+aSeed*2.0) + aSeed*90.0);
+          vA = uDust * inShaft * tw * smoothstep(0.0, 3.0, -mv.z) * (1.0 - smoothstep(14.0, 28.0, -mv.z));
+        }`,
+      fragmentShader: `
+        varying float vA;
+        void main(){
+          vec2 uv = gl_PointCoord - 0.5;
+          float a = smoothstep(0.5, 0.1, length(uv)) * vA * 0.22;
+          gl_FragColor = vec4(vec3(0.82, 0.79, 0.95), a);
+        }`
+    });
+    const dust = new THREE.Points(dustGeo, dustMat); dust.frustumCulled = false; scene.add(dust);
+  }
+
+  function buildSlots(){
+    slots = [];
+    for(let p=0; p<PERIODS; p++)
+      for(let side=-1; side<=1; side+=2)
+        for(let r=0; r<ROWS; r++){
+          // Graine déterministe par (side, r) uniquement : jamais par p ni par l'ordre d'appel,
+          // sinon les deux périodes divergeraient et le wrap deviendrait visible.
+          const rnd = mulberry32(((r*73856093) ^ (side===1?19349663:97)) >>> 0);
+          slots.push({ side, r, p, z: Z0 - p*TUNNEL - r*SPACING - SPACING/2,
+                       variant: Math.floor(rnd()*8) });
+        }
+  }
+
+  const _m = new THREE.Matrix4(), _p = new THREE.Vector3(),
+        _q = new THREE.Quaternion(), _qF = new THREE.Quaternion(),
+        _s1 = new THREE.Vector3(1,1,1), _sM = new THREE.Vector3(1,-1,1);
+
+  function setInst(im, i, x, y, z, quat, mirrored){
+    _p.set(x, mirrored ? -y : y, z);
+    _m.compose(_p, quat || _q.identity(), mirrored ? _sM : _s1);
+    im.setMatrixAt(i, _m);
   }
 
   function buildRacks(){
-    for(let side=-1; side<=1; side+=2){
-      for(let r=0; r<ROWS; r++){
-        const zc = Z0 - r*SPACING - SPACING/2;
-        const u = new THREE.Group(); u.position.set(0,0,zc); u.userData = { side, r };
-        const m = new THREE.Mesh(rackGeo, rackMat); m.position.set(side*RACK_X, RACK_H/2+0.05, 0); u.add(m);
-        const faceMat = (pickF()<0.22) ? meshMats[Math.floor(pickF()*meshMats.length)] : serverMats[Math.floor(pickF()*serverMats.length)];
-        const f = new THREE.Mesh(faceGeo, faceMat); f.position.set(side*(FACE_X-0.02), RACK_H/2+0.05, 0); f.rotation.y = -side*Math.PI/2; u.add(f);
-        const handle = new THREE.Mesh(handleGeo, handleMat); handle.position.set(side*(FACE_X-0.06), RACK_H*0.5, (pickF()<0.5?-RACK_Z*0.40:RACK_Z*0.40)); u.add(handle);
-        units.push(u); worldGroup.add(u);
+    buildSlots();
+    const N = slots.length;                                  // 136
+    casesIM  = new THREE.InstancedMesh(rackGeo, rackMat, N*2);
+    facesIM  = new THREE.InstancedMesh(faceGeo, faceMat, N*2);
+    const pillarGeo = new THREE.BoxGeometry(0.07, RACK_H, 0.09);
+    pillarsIM = new THREE.InstancedMesh(pillarGeo, pillarMat, N*4);   // 2 montants par baie
+    const tiles = new Float32Array(N*2*2);                   // offset UV par instance de face
+    // Remplissage monde d'abord (indices [0..N-1]) puis miroir ([N..2N-1]) ; pillarsIM : monde
+    // [0..2N-1], miroir [2N..4N-1] (via j*2). L'ordre permet à applyLive() de tronquer via im.count.
+    slots.forEach((s, i) => {
+      for(const mir of [0,1]){
+        const j = i + mir*N;
+        setInst(casesIM, j, s.side*RACK_X, RACK_H/2+0.05, s.z, null, mir);
+        _qF.setFromAxisAngle(new THREE.Vector3(0,1,0), -s.side*Math.PI/2);
+        // La façade reste plaquée au fond du caisson (FACE_X - 0.02) ; ce sont les montants qui
+        // avancent de FACE_RECESS vers l'allée, ce qui donne l'impression que la façade est
+        // renfoncée. Ne pas mettre la façade à FACE_X + FACE_RECESS : elle serait dans le caisson opaque.
+        setInst(facesIM, j, s.side*(FACE_X - 0.02), RACK_H/2+0.05, s.z, _qF, mir);
+        tiles[j*2]   = (s.variant%4)/4;
+        tiles[j*2+1] = 1 - (Math.floor(s.variant/4)+1)/2;
+        setInst(pillarsIM, j*2,   s.side*(FACE_X - FACE_RECESS), RACK_H/2+0.05, s.z - RACK_Z*0.44, null, mir);
+        setInst(pillarsIM, j*2+1, s.side*(FACE_X - FACE_RECESS), RACK_H/2+0.05, s.z + RACK_Z*0.44, null, mir);
       }
+    });
+    // aTile est un attribut PAR INSTANCE : on clone la géométrie pour ne pas le faire fuiter sur faceGeo partagé.
+    facesIM.geometry = faceGeo.clone();
+    facesIM.geometry.setAttribute('aTile', new THREE.InstancedBufferAttribute(tiles, 2));
+    for(const im of [casesIM, facesIM, pillarsIM]){
+      im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; worldGroup.add(im);
     }
   }
 
@@ -223,12 +428,14 @@ if (renderer) {
     const U = Math.max(20, Math.round(34*config.density));
     const uH = (yTop-yBase)/U;
     const ledZ = RACK_Z*0.86;
-    for(const u of units){
-      if(u.userData.led){ u.userData.led.geometry.dispose(); u.remove(u.userData.led); u.userData.led=null; }
-      const rnd = mulberry32(((seed ^ (u.userData.r*73856093) ^ (u.userData.side===1?19349663:0))>>>0) || 1);
-      const x = u.userData.side*(FACE_X-0.012);
-      const pos=[],col=[],pha=[],rate=[],base=[];
-      const addLED=(yy,zz,c,fixed,b)=>{ pos.push(x,yy,zz); col.push(c.r,c.g,c.b); pha.push(rnd()); rate.push(fixed?0.03:0.5+rnd()*2.2); base.push(b); };
+    if(ledPoints){ ledPoints.geometry.dispose(); scene.remove(ledPoints); ledPoints = null; }
+    // Un seul Points global (monde + miroir) au lieu d'un Points par baie.
+    const pos=[],col=[],pha=[],rate=[],base=[],tr=[];
+    for(const s of slots){
+      // Graine par (seed, r, side) uniquement (jamais par p) : les 2 périodes restent identiques -> pas de saut au wrap.
+      const rnd = mulberry32(((seed ^ (s.r*73856093) ^ (s.side===1?19349663:0))>>>0) || 1);
+      const x = s.side*(FACE_X - 0.032);
+      const addLED=(yy,zz,c,fixed,b,isTraffic)=>{ pos.push(x,yy,s.z+zz); col.push(c.r,c.g,c.b); pha.push(rnd()); rate.push(fixed?0.03:0.5+rnd()*2.2); base.push(b); tr.push(isTraffic?1:0); };
       const z0 = -ledZ/2;
       let uu=0;
       while(uu<U){
@@ -244,25 +451,37 @@ if (renderer) {
         const lineFixed = rnd()<0.7; const lineB = 0.8+rnd()*0.4;
         for(let k=0;k<nLed;k++){
           const z = zStart + (k/(nLed-1))*usable;
-          let c=main, fixed=lineFixed, b=lineB; const accent=rnd();
-          if(accent<0.06){ c=new THREE.Color().setHSL(45/360,0.95,0.6); fixed=false; b=1.1; }
+          let c=main, fixed=lineFixed, b=lineB, isTraffic=false; const accent=rnd();
+          // L'accent (6% des LED, façon switch réseau) marque une LED d'activité : rafales pilotées par uTraffic côté shader.
+          if(accent<0.06){ c=new THREE.Color().setHSL(45/360,0.95,0.6); fixed=false; b=1.1; isTraffic=true; }
           else if(accent<0.085){ c=new THREE.Color().setHSL(0,0.9,0.58); fixed=false; b=1.0; }
           else if(accent<0.16){ c=new THREE.Color().setHSL(0,0,0.96); fixed=true; b=1.0; }
-          addLED(yc, z, c, fixed, b);
+          addLED(yc, z, c, fixed, b, isTraffic);
         }
         if(span===2 && rnd()<0.6){
           const y2=yc-uH*0.55; const n2=Math.round(nLed*0.7);
-          for(let k=0;k<n2;k++){ const z=zStart+(k/(n2-1))*usable*0.9; addLED(y2,z,main, rnd()<0.8, lineB*0.85); }
+          for(let k=0;k<n2;k++){ const z=zStart+(k/(n2-1))*usable*0.9; addLED(y2,z,main, rnd()<0.8, lineB*0.85, false); }
         }
       }
-      const g=new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
-      g.setAttribute('aColor', new THREE.Float32BufferAttribute(col,3));
-      g.setAttribute('aPhase', new THREE.Float32BufferAttribute(pha,1));
-      g.setAttribute('aRate', new THREE.Float32BufferAttribute(rate,1));
-      g.setAttribute('aBase', new THREE.Float32BufferAttribute(base,1));
-      const pts = new THREE.Points(g, ledMat); pts.frustumCulled=false; u.add(pts); u.userData.led=pts;
     }
+    // Copies miroir sous le sol (y négatif, base atténuée à 40 %) quand le miroir est actif.
+    ledMirror = config.mirror;
+    if(config.mirror !== 0){
+      const nW = base.length;
+      for(let i=0;i<nW;i++){
+        pos.push(pos[i*3], -pos[i*3+1], pos[i*3+2]);
+        col.push(col[i*3], col[i*3+1], col[i*3+2]);
+        pha.push(pha[i]); rate.push(rate[i]); base.push(base[i]*0.4); tr.push(tr[i]);
+      }
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+    g.setAttribute('aColor', new THREE.Float32BufferAttribute(col,3));
+    g.setAttribute('aPhase', new THREE.Float32BufferAttribute(pha,1));
+    g.setAttribute('aRate', new THREE.Float32BufferAttribute(rate,1));
+    g.setAttribute('aBase', new THREE.Float32BufferAttribute(base,1));
+    g.setAttribute('aTr', new THREE.Float32BufferAttribute(tr,1));
+    ledPoints = new THREE.Points(g, ledMat); ledPoints.frustumCulled=false; scene.add(ledPoints);
   }
 
   function veilCss(){ return `radial-gradient(70% 64% at 50% 48%, ${hexToRgba(config.bg, config.veil*0.92)} 0%, ${hexToRgba(config.bg, config.veil*0.42)} 44%, ${hexToRgba(config.bg, 0)} 74%)`; }
@@ -272,13 +491,35 @@ if (renderer) {
     scene.fog.density = config.fog; scene.fog.color.set(config.bg);
     ledMat.uniforms.uFog.value = config.fog; ledMat.uniforms.uSize.value = config.ledSize;
     ledMat.uniforms.uBlink.value = config.blink; ledMat.uniforms.uFogColor.value.set(config.bg);
+    ledMat.uniforms.uTraffic.value = config.traffic;
+    faceMat.uniforms.uFogColor.value.set(config.bg); faceMat.uniforms.uFogDensity.value = config.fog;
+    // Vie du datacenter (tâche 8) : vitesse de défilement des écrans de logs.
+    screenMat.uniforms.uSpeed.value = config.screens;
+    // Éclairage cuit : rampes plafond (couleur + intensité). La modulation des façades a été
+    // RETIRÉE (elle créait des pans pâles à frontière nette entre baies voisines) : l'éclairage
+    // rythmé est porté par les rampes, les faisceaux et les pools cuits dans le sol.
+    // Emissivite SOUS le blanc de saturation (~0.95 a ramp=1) : la reglette la plus proche,
+    // vue de dessous, reste une surface eclairee lisible au lieu d'une boule de bloom.
+    rampMat.color.setScalar(0.70 + 0.25*config.ramp);
+    // Atmosphère (tâche 7) : faisceaux volumétriques faux + poussière.
+    // 0.14 : depuis le fondu de Fresnel, l'energie du faisceau se concentre face camera ;
+    // a 0.20 le cumul rampe + faisceau + bloom eblouit au passage sous un neon.
+    shaftMat.uniforms.uOpacity.value = 0.14 * config.shaft;
+    dustMat.uniforms.uDust.value = config.dust;
+    // Miroir : les instances miroir sont en seconde moitié -> on tronque via im.count (pas de mirrorGroup).
+    const N = slots.length;
+    for(const im of [casesIM, facesIM, pillarsIM]) if(im) im.count = config.mirror !== 0 ? (im === pillarsIM ? N*4 : N*2) : (im === pillarsIM ? N*2 : N);
+    if(rampsIM) rampsIM.count = config.mirror !== 0 ? NRAMP*2 : NRAMP;
+    if(config.mirror !== ledMirror) buildLEDs();   // reconstruit les LED avec/sans copies miroir
     if(veilEl) veilEl.style.background = veilCss();
     document.body.style.background = config.bg;
   }
 
+  let camZ = Z_CAM;
   const t0 = performance.now();
   const FRAME_MS = 1000 / 30;   // ~30 fps : ~5x moins de charge GPU, invisible sur un fond lent
-  let raf = 0, last = 0;
+  let raf = 0, last = 0, started = false;   // started : les handlers restent inertes tant que start() n'a pas construit la scène
+  const stats = { ms: 0, calls: 0 };   // instrumentation perf (ms/frame CPU, EMA) : voir window.DC.stats
   function animate(now){
     if (document.hidden) { raf = 0; return; }   // 0 GPU quand l'onglet est caché
     raf = requestAnimationFrame(animate);
@@ -286,69 +527,70 @@ if (renderer) {
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016); last = now;
     const time = (now-t0)/1000;
     ledMat.uniforms.uTime.value = time;
-    for(const u of units){ u.position.z += config.camSpeed*dt; if(u.position.z > NEAR_WRAP) u.position.z -= TUNNEL; }
-    camera.position.set(Math.sin(time*0.12)*0.10, 1.5+Math.sin(time*0.1)*0.04, Z_CAM);
-    camera.lookAt(Math.sin(time*0.05)*0.15, 0.55, Z_CAM-12);
+    screenMat.uniforms.uTime.value = time;
+    camZ -= config.camSpeed*dt;
+    if (camZ < Z_CAM - TUNNEL) camZ += TUNNEL;
+    endGlow.position.z = camZ - 60;
+    dustMat.uniforms.uTime.value = time; dustMat.uniforms.uCamZ.value = camZ;
+    camera.position.set(Math.sin(time*0.12)*0.10, 1.5+Math.sin(time*0.1)*0.04, camZ);
+    camera.lookAt(Math.sin(time*0.05)*0.15, 0.55, camZ-12);
+    const tA = performance.now();
     composer.render();
+    stats.ms += (performance.now() - tA) * 0.05 - stats.ms * 0.05;   // EMA
+    stats.calls = renderer.info.render.calls;
+    if (!canvas.classList.contains('ready')) canvas.classList.add('ready');   // 1re frame prête -> fondu poster -> 3D
   }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(animate); } });
+  document.addEventListener('visibilitychange', () => { if (!started) return; if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(animate); } });
   function resize(){
+    if (!started) return;
     const W=window.innerWidth, H=window.innerHeight, dpr=pixRatio();
     renderer.setPixelRatio(dpr); renderer.setSize(W,H);
     composer.setPixelRatio(dpr); composer.setSize(W,H); bloom.setSize(W,H);
     camera.aspect = W/H; camera.updateProjectionMatrix();
     ledMat.uniforms.uHeight.value = (H*dpr)/(2*Math.tan(THREE.MathUtils.degToRad(FOV/2)));
+    dustMat.uniforms.uHeight.value = ledMat.uniforms.uHeight.value;
   }
   window.addEventListener('resize', resize);
 
-  function buildPanel(){
-    const controls = document.getElementById('controls'); if(!controls) return;
-    const REGEN = ['density','palette'];
-    const SLIDERS = [
-      { group:'Allée' },
-      { key:'camSpeed', label:'Vitesse caméra', min:0, max:3, step:0.05, fmt:v=>v.toFixed(2) },
-      { key:'fog', label:'Brouillard', min:0, max:0.12, step:0.005, fmt:v=>v.toFixed(3) },
-      { group:'LED' },
-      { key:'blink', label:'Clignotement', min:0, max:3, step:0.05, fmt:v=>v.toFixed(2) },
-      { key:'density', label:'Densité', min:0.4, max:2, step:0.05, fmt:v=>v.toFixed(2) },
-      { key:'ledSize', label:'Taille', min:0.01, max:0.12, step:0.005, fmt:v=>v.toFixed(3) },
-      { key:'glow', label:'Bloom / lueur', min:0, max:2, step:0.05, fmt:v=>v.toFixed(2) },
-      { group:'Lisibilité' },
-      { key:'veil', label:'Voile central', min:0, max:1, step:0.02, fmt:v=>v.toFixed(2) }
-    ];
-    SLIDERS.forEach(def=>{
-      if(def.group){ const t=document.createElement('div'); t.className='group-title'; t.textContent=def.group; controls.appendChild(t); return; }
-      const row=document.createElement('div'); row.className='row';
-      row.innerHTML=`<div class="lab"><span>${def.label}</span><span class="val" id="val-${def.key}"></span></div><input type="range" id="in-${def.key}" min="${def.min}" max="${def.max}" step="${def.step}">`;
-      controls.appendChild(row);
-      const input=row.querySelector('input'), val=row.querySelector('.val');
-      input.value=config[def.key]; val.textContent=def.fmt(config[def.key]);
-      input.addEventListener('input', ()=>{ config[def.key]=parseFloat(input.value); val.textContent=def.fmt(config[def.key]); if(REGEN.includes(def.key)) buildLEDs(); applyLive(); });
-    });
-    const palRow=document.createElement('div'); palRow.className='row';
-    palRow.innerHTML=`<div class="lab"><span>Ambiance LED</span></div><select id="in-pal"><option value="green">Vert (réf.)</option><option value="datacenter">Bleu</option><option value="multi">Multicolore</option><option value="cyan">Cyan / bleu</option><option value="amber">Ambre / or</option><option value="warm">Chaud (rouge/violet)</option><option value="violet">Violet (YouKyi)</option><option value="violetPremium">Violet premium (pro)</option></select>`;
-    controls.appendChild(palRow);
-    const palSel=palRow.querySelector('select'); palSel.value=config.palette; palSel.addEventListener('change', ()=>{ config.palette=palSel.value; buildLEDs(); });
-    const bgRow=document.createElement('div'); bgRow.className='row'; bgRow.innerHTML=`<div class="lab"><span>Couleur de fond</span></div><input type="color" id="in-bg">`;
-    controls.appendChild(bgRow);
-    const bgInput=bgRow.querySelector('input'); bgInput.value=config.bg; bgInput.addEventListener('input', ()=>{ config.bg=bgInput.value; applyLive(); });
-    const actRow=document.createElement('div'); actRow.className='btn-row'; actRow.innerHTML=`<button class="act" id="btn-regen">↻ Régénérer</button><button class="act primary" id="btn-copy">⧉ Copier la config</button>`;
-    controls.appendChild(actRow);
-    document.getElementById('btn-regen').addEventListener('click', ()=>{ seed=Math.floor(Math.random()*1e9); buildLEDs(); });
-    document.getElementById('btn-copy').addEventListener('click', ()=>{ const clean={}; Object.keys(DEFAULTS).forEach(k=>clean[k]=config[k]); const json=JSON.stringify(clean,null,2); if(navigator.clipboard) navigator.clipboard.writeText(json).then(showToast,()=>fb(json)); else fb(json); });
-    function fb(text){ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); showToast(); }catch(e){} ta.remove(); }
-    const toast=document.getElementById('toast'); let tt; function showToast(){ if(!toast)return; toast.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),1600); }
-    const panel=document.getElementById('panel'), togBtn=document.getElementById('toggle-panel');
-    function setPanel(open){ if(!panel)return; panel.classList.toggle('collapsed',!open); if(togBtn){ togBtn.style.opacity=open?'0':'1'; togBtn.style.pointerEvents=open?'none':'auto'; } }
-    const colBtn=document.getElementById('btn-collapse'); if(colBtn) colBtn.addEventListener('click', ()=>setPanel(false));
-    if(togBtn) togBtn.addEventListener('click', ()=>setPanel(true));
-    setPanel(true);
+  // Capture d'un poster statique de la scène (au tuner) : sert à générer
+  // assets/poster-<variante>.webp, affiché tant que le moteur 3D n'a pas démarré.
+  function capturePoster(){
+    composer.render();   // frame fraîche dans le buffer (preserveDrawingBuffer est false)
+    renderer.domElement.toBlob((blob) => {
+      if (!blob) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `poster-${config.palette === 'violetPremium' ? 'pro' : 'link'}.webp`;
+      a.click(); URL.revokeObjectURL(a.href);
+    }, 'image/webp', 0.92);
   }
 
-  buildStatics(); buildRacks(); buildLEDs();
-  resize(); applyLive();
-  if(window.DC_PANEL) buildPanel();
-  raf = requestAnimationFrame(animate);
+  // Démarrage différé : la construction (instancing) et la boucle rAF sont coûteuses,
+  // on les reporte après le chargement de la page (idle) pour ne pas concurrencer le
+  // premier rendu du contenu. Le poster CSS reste visible entre-temps.
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function start(){
+    started = true;
+    // Textures lourdes (canvas) construites seulement au démarrage réel du moteur, jamais sous reduced-motion.
+    faceMat.uniforms.uAtlas.value = makeFacadeAtlas(renderer.capabilities.maxTextureSize).texture;
+    screenMat.uniforms.uMap.value = makeLogTexture();
+    buildStatics(); buildAtmosphere(); buildRacks(); buildLEDs(); buildScreens();
+    resize(); applyLive();
+    if (window.DC_PANEL) import('./dc-panel.js').then(m => m.buildPanel({
+      config, DEFAULTS, applyLive, buildLEDs, capturePoster,
+      regen(){ seed = Math.floor(Math.random()*1e9); buildLEDs(); },
+      getStats(){ return stats; }
+    }));
+    raf = requestAnimationFrame(animate);
+  }
+  if (window.DC_PANEL) {
+    start();                                   // le tuner démarre toujours, tout de suite
+  } else if (!reduced) {
+    const idle = () => ('requestIdleCallback' in window)
+      ? requestIdleCallback(start, { timeout: 1500 }) : setTimeout(start, 200);
+    (document.readyState === 'complete') ? idle()
+      : window.addEventListener('load', idle, { once: true });
+  } // sinon : reduced-motion -> le poster reste, le moteur 3D ne démarre jamais
 
-  window.DC = { DEFAULTS, config, PALETTES, applyLive, buildLEDs, regen(){ seed=Math.floor(Math.random()*1e9); buildLEDs(); } };
+  window.DC = { build: DC_BUILD, DEFAULTS, config, PALETTES, applyLive, buildLEDs, capturePoster, regen(){ seed=Math.floor(Math.random()*1e9); buildLEDs(); }, stats };
 }

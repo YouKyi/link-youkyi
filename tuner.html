@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tuner · fond datacenter 3D (YouKyi)</title>
+  <style>
+    /* --- Scène plein écran (autonome, sans tailwind.css) --- */
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #04060a;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #e8e6ef; }
+    #scene-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
+    #veil { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+    .scene-vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background: radial-gradient(ellipse 72% 60% at 50% 45%, transparent 38%, rgba(0,0,0,.62) 100%); }
+    .hint { position: fixed; left: 16px; bottom: 16px; z-index: 5; max-width: 48ch; font-size: 12px; line-height: 1.45;
+      color: rgba(255,255,255,.62); background: rgba(8,6,14,.5); border: 1px solid rgba(255,255,255,.08);
+      padding: 8px 12px; border-radius: 10px; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+    .hint b { color: #c9a0ff; }
+
+    /* --- Panneau de réglage (le tuner) --- */
+    #panel { position: fixed; top: 14px; right: 14px; width: 288px; max-height: calc(100vh - 28px); overflow-y: auto; z-index: 50;
+      background: rgba(12,10,18,.92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      border: 1px solid rgba(157,31,244,.35); border-radius: 14px; padding: 14px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.5); transition: transform .25s ease, opacity .25s ease; }
+    #panel.collapsed { transform: translateX(120%); opacity: 0; pointer-events: none; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .panel-title { font-weight: 700; color: #c9a0ff; font-size: 13px; }
+    #btn-collapse { background: none; border: none; color: #9a92ad; font-size: 20px; line-height: 1; cursor: pointer; }
+    #btn-collapse:hover { color: #fff; }
+    .group-title { margin: 12px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #9d6bff; font-weight: 700; }
+    #controls .row { margin: 8px 0; }
+    .lab { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; font-size: 12px; color: #cdc8da; }
+    .val { color: #9d6bff; font-variant-numeric: tabular-nums; font-size: 11px; }
+    #controls input[type=range] { width: 100%; accent-color: #9025f4; cursor: pointer; }
+    #controls select, #controls input[type=color] { width: 100%; background: rgba(255,255,255,.06); color: #e8e6ef;
+      border: 1px solid rgba(255,255,255,.14); border-radius: 8px; padding: 5px 6px; font-size: 12px; }
+    #controls input[type=color] { height: 30px; padding: 2px; cursor: pointer; }
+    .btn-row { display: flex; gap: 8px; margin-top: 14px; }
+    .act { flex: 1; padding: 7px 8px; border-radius: 9px; border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.05); color: #e8e6ef; font-size: 12px; cursor: pointer; transition: background .2s; }
+    .act:hover { background: rgba(255,255,255,.12); }
+    .act.primary { background: rgba(144,37,244,.28); border-color: rgba(144,37,244,.55); }
+    .act.primary:hover { background: rgba(144,37,244,.42); }
+    #toggle-panel { position: fixed; top: 14px; right: 14px; z-index: 49; width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(12,10,18,.9); border: 1px solid rgba(157,31,244,.4); color: #c9a0ff; font-size: 18px; cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); z-index: 60;
+      background: rgba(144,37,244,.95); color: #fff; padding: 9px 16px; border-radius: 10px; font-size: 13px;
+      opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <canvas id="scene-canvas" aria-hidden="true"></canvas>
+  <div id="veil" aria-hidden="true"></div>
+  <div class="scene-vignette" aria-hidden="true"></div>
+
+  <p class="hint">Tuner local du fond 3D. Règle les sliders, choisis la <b>palette</b> et la couleur de fond, puis
+    <b>⧉ Copier la config</b> pour coller le JSON dans <b>build/generate.mjs</b> (FROZEN_DC = link) ou
+    <b>config/pro.json</b> (bloc <b>dc</b> = pro).</p>
+
+  <!-- Panneau rempli par buildPanel() de dc-panel.js (chargé dynamiquement si window.DC_PANEL) -->
+  <button id="toggle-panel" aria-label="Ouvrir les réglages">⚙</button>
+  <aside id="panel" aria-label="Réglages du fond 3D">
+    <div class="panel-head">
+      <span class="panel-title">Réglages · fond 3D</span>
+      <button id="btn-collapse" aria-label="Réduire">×</button>
+    </div>
+    <div id="controls"></div>
+  </aside>
+  <div id="toast">Config copiée ✓</div>
+
+  <!-- Config de départ (modifiable en live) + activation du panneau -->
+  <script>
+    window.DC_CONFIG = {"camSpeed":0.40,"blink":1.05,"density":0.75,"ledSize":0.045,"glow":1.20,"fog":0.025,"veil":0.32,"palette":"violet","bg":"#0B0712"};
+    window.DC_PANEL = true;
+  </script>
+  <script type="importmap">{"imports":{"three":"/assets/vendor/three/three.module.js","three/addons/":"/assets/vendor/three/addons/"}}</script>
+  <script type="module" src="/assets/vendor/datacenter.js"></script>
+</body>
+</html>
