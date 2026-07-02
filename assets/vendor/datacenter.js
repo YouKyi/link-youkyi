@@ -9,7 +9,7 @@ import * as THREE from 'three';
 
 // Identifiant de build, affiché dans le panneau du tuner : permet de vérifier
 // d'un coup d'oeil que le navigateur n'exécute pas une version en cache.
-const DC_BUILD = 'b8-fondu-moyenne';
+const DC_BUILD = 'b9-sans-modulation';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -109,41 +109,28 @@ if (renderer) {
       uBright: { value: 1.0 },
       uFogColor: { value: new THREE.Color(config.bg) },
       uFogDensity: { value: config.fog },
-      uRampSpacing: { value: SPACING*2 },   // utilisés à partir de la tâche 6
-      uRampZ0: { value: 0 },
-      uRampBright: { value: 0 },             // 0 = modulation neutre pour l'instant
     },
     // three r160 : pour un ShaderMaterial rendu par un InstancedMesh, three declare deja
     // `attribute mat4 instanceMatrix;` (prefixe USE_INSTANCING). On ne le redeclare donc PAS ici
     // (une double declaration serait une erreur GLSL) ; on l'utilise directement dans main().
     vertexShader: `
       attribute vec2 aTile;
-      varying vec2 vUv; varying vec2 vTile; varying float vWZ; varying float vDist;
+      varying vec2 vUv; varying vec2 vTile; varying float vDist;
       void main(){
         vUv = uv; vTile = aTile;
         vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
-        vWZ = wp.z;
         vec4 mv = viewMatrix * wp;
         vDist = -mv.z;
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
       uniform sampler2D uAtlas; uniform vec2 uTileScale;
-      uniform float uBright, uFogDensity, uRampSpacing, uRampZ0, uRampBright;
+      uniform float uBright, uFogDensity;
       uniform vec3 uFogColor;
-      varying vec2 vUv; varying vec2 vTile; varying float vWZ; varying float vDist;
+      varying vec2 vUv; varying vec2 vTile; varying float vDist;
       void main(){
         vec3 tex = texture2D(uAtlas, vUv * uTileScale + vTile).rgb;
-        float d = (vWZ - uRampZ0) / uRampSpacing;
-        float pool = pow(0.5 + 0.5*cos(6.28318*d), 1.6);
-        // Amplitude volontairement douce (+-15 %) : au-dela, deux baies adjacentes en phases
-        // opposees creent un pan pale a frontiere nette (bord de baie), lisible comme un bug.
-        float light = mix(1.0, 0.82 + 0.30*pool, clamp(uRampBright, 0.0, 2.0));
-        // Fondu de proximite vers la LUMINOSITE MOYENNE (pas vers 1.0, sinon la baie proche
-        // reste plus claire que les creux voisins) : sous ~6 m la modulation s'efface.
-        float lightAvg = mix(1.0, 0.93, clamp(uRampBright, 0.0, 2.0));
-        light = mix(lightAvg, light, smoothstep(2.0, 6.0, vDist));
-        vec3 col = tex * uBright * light;
+        vec3 col = tex * uBright;
         float f = 1.0 - exp(-uFogDensity*uFogDensity*vDist*vDist);
         gl_FragColor = vec4(mix(col, uFogColor, clamp(f,0.0,1.0)), 1.0);
       }`,
@@ -501,10 +488,10 @@ if (renderer) {
     faceMat.uniforms.uFogColor.value.set(config.bg); faceMat.uniforms.uFogDensity.value = config.fog;
     // Vie du datacenter (tâche 8) : vitesse de défilement des écrans de logs.
     screenMat.uniforms.uSpeed.value = config.screens;
-    // Éclairage cuit : rampes plafond (couleur + intensité) et modulation des façades sous les pools.
+    // Éclairage cuit : rampes plafond (couleur + intensité). La modulation des façades a été
+    // RETIRÉE (elle créait des pans pâles à frontière nette entre baies voisines) : l'éclairage
+    // rythmé est porté par les rampes, les faisceaux et les pools cuits dans le sol.
     rampMat.color.setScalar(0.75 + 1.5*config.ramp);           // blanc chaud -> le bloom fait le halo
-    faceMat.uniforms.uRampBright.value = config.ramp;
-    faceMat.uniforms.uRampZ0.value = RAMP_Z0;
     // Atmosphère (tâche 7) : faisceaux volumétriques faux + poussière.
     shaftMat.uniforms.uOpacity.value = 0.20 * config.shaft;
     dustMat.uniforms.uDust.value = config.dust;
