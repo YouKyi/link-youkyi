@@ -237,3 +237,49 @@ export function makeFacadeAtlas(maxTexSize){
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16;
   return { texture: t, cols: 4, rows: 2, tiles: 8 };
 }
+
+// Texture de sol : dalles + pools de lumière sous les rampes plafond. Couvre 14 m (X) x 4.8 m (Z)
+// monde (une travée de rampe), répétée via RepeatWrapping le long de l'allée.
+export function makeFloorTexture(){
+  const W=512, H=1024;   // 14 m x 4.8 m monde -> 1 travée de rampe
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const x=c.getContext('2d');
+  x.fillStyle='#05070b'; x.fillRect(0,0,W,H);
+  // dalles 0.6 m : pas de 512/14*0.6 ≈ 22 px en X, 1024/4.8*0.6 = 128 px en Z
+  const px=W/14*0.6, pz=H/4.8*0.6;
+  x.strokeStyle='rgba(150,170,205,0.07)'; x.lineWidth=1;
+  for(let gx=0; gx<=W; gx+=px){ x.beginPath(); x.moveTo(gx,0); x.lineTo(gx,H); x.stroke(); }
+  for(let gz=0; gz<=H; gz+=pz){ x.beginPath(); x.moveTo(0,gz); x.lineTo(W,gz); x.stroke(); }
+  // perforations d'aération sur les dalles côté baies
+  for(let gz=pz/2; gz<H; gz+=pz) for(let gx=px/2; gx<W; gx+=px){
+    const lane = gx < W*0.30 || gx > W*0.70;
+    if(!lane) continue;
+    for(let i=0;i<9;i++){ x.fillStyle='rgba(0,0,0,0.5)';
+      x.beginPath(); x.arc(gx-6+(i%3)*6, gz-6+Math.floor(i/3)*6, 1.1, 0, 6.2832); x.fill(); }
+  }
+  // pool de lumière de la rampe : ellipse centrée en Z=H/2 (sous la rampe), centre d'allée
+  let g = x.createRadialGradient(W/2,H/2,10, W/2,H/2,240);
+  g.addColorStop(0,'rgba(205,200,255,0.16)'); g.addColorStop(0.45,'rgba(190,180,255,0.07)');
+  g.addColorStop(1,'rgba(0,0,0,0)');
+  x.save(); x.translate(W/2,H/2); x.scale(0.55,1); x.translate(-W/2,-H/2);
+  x.fillStyle=g; x.fillRect(0,0,W,H); x.restore();
+  // usure : traces de roulettes au centre de l'allée
+  x.fillStyle='rgba(255,255,255,0.016)';
+  x.fillRect(W*0.44,0,7,H); x.fillRect(W*0.53,0,7,H);
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=THREE.RepeatWrapping; t.wrapT=THREE.RepeatWrapping;
+  t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=16;
+  return t;
+}
+
+// Texture de lueur : dégradé radial blanc -> transparent, réutilisée pour le fond d'allée
+// (et la tâche 7).
+export function makeGlowTexture(size=128){
+  const c=document.createElement('canvas'); c.width=c.height=size;
+  const x=c.getContext('2d');
+  const g=x.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2);
+  g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.4,'rgba(255,255,255,0.35)');
+  g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g; x.fillRect(0,0,size,size);
+  return new THREE.CanvasTexture(c);
+}

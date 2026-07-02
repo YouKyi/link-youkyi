@@ -9,12 +9,12 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { mulberry32, makeFacadeAtlas } from './dc-textures.js';
+import { mulberry32, makeFacadeAtlas, makeFloorTexture, makeGlowTexture } from './dc-textures.js';
 
 const DEFAULTS = {
   camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045,
   glow: 1.20, fog: 0.025, veil: 0.32, palette: 'datacenter',
-  bg: '#04060a', theme: 'dark', mirror: 1
+  bg: '#04060a', theme: 'dark', mirror: 1, ramp: 1.0
 };
 let config = Object.assign({}, DEFAULTS, (window.DC_CONFIG || {}));
 
@@ -61,13 +61,14 @@ if (renderer) {
   const FACE_X = RACK_X - RACK_W / 2;
   const PERIODS = 2;
   const Z0 = 4, Z_CAM = 2.0, TUNNEL = ROWS * SPACING;
+  const RAMP_SPACING = SPACING*2, RAMP_Z0 = Z0 - 1.2;   // pas des rampes plafond ; RAMP_Z0 = phase de tout l'éclairage cuit
 
   const worldGroup = new THREE.Group(); scene.add(worldGroup);
 
   // Baies instanciées : ~4 InstancedMesh au lieu de 272 Groups. Le miroir (sous le sol) n'est plus
   // un Group cloné (scale.y = -1) mais la seconde moitié des instances -> encore une passe, moins d'objets.
   const FACE_RECESS = 0.10;          // renfoncement de la façade dans le caisson
-  let slots = [], casesIM, facesIM, pillarsIM, ledPoints = null, ledMirror = -1;
+  let slots = [], casesIM, facesIM, pillarsIM, rampsIM, rampMat, NRAMP, ledPoints = null, ledMirror = -1;
 
   const PALETTES = {
     green: [[128,0.95,0.58,9],[118,0.92,0.54,4],[140,0.85,0.56,2],[150,0.8,0.6,1.5],[212,0.95,0.62,2.2],[225,0.9,0.64,1.2]],
@@ -162,14 +163,49 @@ if (renderer) {
   });
 
   function buildStatics(){
+    // L et zC : étendue (Z) et centre du monde statique (2 périodes + marge) ; réutilisés par
+    // le sol, les rails/plafond ci-dessous et (tâche 7) le fond d'allée.
+    const L = PERIODS*TUNNEL + 24, zC = Z0 - PERIODS*TUNNEL/2;
     for(let side=-1; side<=1; side+=2){
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.18,PERIODS*TUNNEL+24), new THREE.MeshStandardMaterial({ color:0x0a0b10, roughness:0.8, metalness:0.6 }));
-      rail.position.set(side*1.5, RACK_H+0.45, Z0-PERIODS*TUNNEL/2); worldGroup.add(rail);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.18,L), new THREE.MeshStandardMaterial({ color:0x0a0b10, roughness:0.8, metalness:0.6 }));
+      rail.position.set(side*1.5, RACK_H+0.45, zC); worldGroup.add(rail);
     }
-    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(14, PERIODS*TUNNEL+24), new THREE.MeshStandardMaterial({ color:0x070809, roughness:0.95, metalness:0.2 }));
-    ceil.rotation.x = Math.PI/2; ceil.position.set(0, RACK_H+1.15, Z0-PERIODS*TUNNEL/2); worldGroup.add(ceil);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, PERIODS*TUNNEL+24), new THREE.MeshStandardMaterial({ color:0x04060a, roughness:0.2, metalness:0.55, transparent:true, opacity:0.62 }));
-    floor.rotation.x = -Math.PI/2; floor.position.set(0,0.002,Z0-PERIODS*TUNNEL/2); worldGroup.add(floor);
+    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(14, L), new THREE.MeshStandardMaterial({ color:0x070809, roughness:0.95, metalness:0.2 }));
+    ceil.rotation.x = Math.PI/2; ceil.position.set(0, RACK_H+1.15, zC); worldGroup.add(ceil);
+
+    // Sol texturé (dalles + pools de lumière sous les rampes) : remplace l'ancien plan semi-
+    // transparent uni (opacité 0.62) de la tâche 3. Le miroir transparaît dans les 12 % restants
+    // et à travers les zones sombres de la texture.
+    const floorTex = makeFloorTexture();
+    floorTex.repeat.set(1, L/4.8);
+    // phase : le pool (centre de tuile) doit tomber sous RAMP_Z0 ; le plan est centré en zC.
+    // NOTE : sens visuel non vérifié ici (pas de navigateur) ; si le pool est décalé par rapport
+    // à la rampe au tuner, inverser le signe de cet offset (cf. brief tâche 6).
+    floorTex.offset.y = (((zC + L/2) - (RAMP_Z0 + 2.4)) / 4.8) % 1;
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, L),
+      new THREE.MeshBasicMaterial({ map: floorTex, transparent: true, opacity: 0.88, color: 0xffffff }));
+    floor.rotation.x = -Math.PI/2; floor.position.set(0, 0.002, zC); worldGroup.add(floor);
+
+    // Rampes plafond instanciées (et leur reflet sous le sol, seconde moitié des instances).
+    const rampGeo = new THREE.BoxGeometry(0.55, 0.06, 1.5);
+    rampMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    NRAMP = Math.round(PERIODS*TUNNEL/RAMP_SPACING);   // 34
+    rampsIM = new THREE.InstancedMesh(rampGeo, rampMat, NRAMP*2);
+    for(let k=0;k<NRAMP;k++){
+      const z = RAMP_Z0 - k*RAMP_SPACING;
+      setInst(rampsIM, k, 0, RACK_H + 1.02, z, null, 0);
+      setInst(rampsIM, k+NRAMP, 0, RACK_H + 1.02, z, null, 1);
+    }
+    rampsIM.instanceMatrix.needsUpdate = true; rampsIM.frustumCulled = false;
+    worldGroup.add(rampsIM);
+
+    // Fond d'allée : aux deux extrémités de période, un plan de lueur discret.
+    const glowMat = new THREE.MeshBasicMaterial({ map: makeGlowTexture(), transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, color: 0x8f7ad9, opacity: 0.5 });
+    for(const zEnd of [Z0 - TUNNEL - 2, Z0 - 2*TUNNEL - 2]){
+      const glow = new THREE.Mesh(new THREE.PlaneGeometry(9, 5), glowMat);
+      glow.position.set(0, 2.2, zEnd); worldGroup.add(glow);
+    }
   }
 
   function buildSlots(){
@@ -296,9 +332,14 @@ if (renderer) {
     ledMat.uniforms.uFog.value = config.fog; ledMat.uniforms.uSize.value = config.ledSize;
     ledMat.uniforms.uBlink.value = config.blink; ledMat.uniforms.uFogColor.value.set(config.bg);
     faceMat.uniforms.uFogColor.value.set(config.bg); faceMat.uniforms.uFogDensity.value = config.fog;
+    // Éclairage cuit : rampes plafond (couleur + intensité) et modulation des façades sous les pools.
+    rampMat.color.setScalar(0.75 + 1.5*config.ramp);           // blanc chaud -> le bloom fait le halo
+    faceMat.uniforms.uRampBright.value = config.ramp;
+    faceMat.uniforms.uRampZ0.value = RAMP_Z0;
     // Miroir : les instances miroir sont en seconde moitié -> on tronque via im.count (pas de mirrorGroup).
     const N = slots.length;
     for(const im of [casesIM, facesIM, pillarsIM]) if(im) im.count = config.mirror !== 0 ? (im === pillarsIM ? N*4 : N*2) : (im === pillarsIM ? N*2 : N);
+    if(rampsIM) rampsIM.count = config.mirror !== 0 ? NRAMP*2 : NRAMP;
     if(config.mirror !== ledMirror) buildLEDs();   // reconstruit les LED avec/sans copies miroir
     if(veilEl) veilEl.style.background = veilCss();
     document.body.style.background = config.bg;
