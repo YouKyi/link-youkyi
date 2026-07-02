@@ -276,14 +276,36 @@ if (renderer) {
   }
 
   function buildAtmosphere(){
-    // Faux faisceaux volumétriques : un cône texturé (dégradé radial) sous chaque rampe, pointe
-    // en haut, base évasée vers le bas. Pas de miroir : aucun reflet utile sous le sol.
+    // Faux faisceaux volumétriques : un cône sous chaque rampe, pointe en haut, base évasée.
+    // Fondu de Fresnel OBLIGATOIRE : sans lui, la silhouette du cône (vue de côté quand la
+    // caméra passe à ras) dessine une démarcation verticale nette et un voile laiteux
+    // asymétrique sur les baies. L'alpha tombe à zéro au bord (normale perpendiculaire à la
+    // vue) et culmine face caméra. Pas de miroir : aucun reflet utile sous le sol.
     const shaftGeo = new THREE.ConeGeometry(1.5, 3.4, 14, 1, true);   // ouvert, pointe en haut
-    const shaftTex = makeGlowTexture(64);
-    shaftTex.wrapS = THREE.ClampToEdgeWrapping;
-    shaftMat = new THREE.MeshBasicMaterial({
-      map: shaftTex, transparent: true, blending: THREE.AdditiveBlending,
-      depthWrite: false, side: THREE.DoubleSide, color: 0xbcb3e8, opacity: 0.10 });
+    shaftMat = new THREE.ShaderMaterial({
+      transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false, side: THREE.DoubleSide,
+      uniforms: { uOpacity: { value: 0.10 }, uColor: { value: new THREE.Color(0xbcb3e8) } },
+      vertexShader: `
+        // instanceMatrix est déclaré automatiquement par three r160 (ShaderMaterial + InstancedMesh)
+        varying float vH; varying float vRim;
+        void main(){
+          vH = uv.y;   // ConeGeometry : v = 1 à la pointe (haut), 0 à la base (bas)
+          vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+          vec3 n = normalize(mat3(modelMatrix * instanceMatrix) * normal);
+          vec3 v = normalize(cameraPosition - wp.xyz);
+          vRim = abs(dot(n, v));
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }`,
+      fragmentShader: `
+        uniform float uOpacity; uniform vec3 uColor;
+        varying float vH; varying float vRim;
+        void main(){
+          float rim = pow(clamp(vRim, 0.0, 1.0), 1.4);          // 0 au bord de silhouette
+          float grad = smoothstep(0.0, 0.9, vH);                 // lumineux près de la rampe
+          gl_FragColor = vec4(uColor, uOpacity * rim * grad);
+        }`
+    });
     const shaftsIM = new THREE.InstancedMesh(shaftGeo, shaftMat, NRAMP);   // pas de miroir
     for(let k=0;k<NRAMP;k++) setInst(shaftsIM, k, 0, RACK_H + 1.02 - 1.7, RAMP_Z0 - k*RAMP_SPACING, null, 0);
     shaftsIM.instanceMatrix.needsUpdate = true; shaftsIM.frustumCulled = false;
@@ -474,7 +496,7 @@ if (renderer) {
     faceMat.uniforms.uRampBright.value = config.ramp;
     faceMat.uniforms.uRampZ0.value = RAMP_Z0;
     // Atmosphère (tâche 7) : faisceaux volumétriques faux + poussière.
-    shaftMat.opacity = 0.20 * config.shaft;
+    shaftMat.uniforms.uOpacity.value = 0.20 * config.shaft;
     dustMat.uniforms.uDust.value = config.dust;
     // Miroir : les instances miroir sont en seconde moitié -> on tronque via im.count (pas de mirrorGroup).
     const N = slots.length;
