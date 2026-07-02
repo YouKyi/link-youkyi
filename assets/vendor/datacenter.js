@@ -6,6 +6,10 @@
    Config par défaut = réglages validés ; surcharge via window.DC_CONFIG.
    Panneau de réglage optionnel via window.DC_PANEL. */
 import * as THREE from 'three';
+
+// Identifiant de build, affiché dans le panneau du tuner : permet de vérifier
+// d'un coup d'oeil que le navigateur n'exécute pas une version en cache.
+const DC_BUILD = 'b8-fondu-moyenne';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -132,10 +136,13 @@ if (renderer) {
         vec3 tex = texture2D(uAtlas, vUv * uTileScale + vTile).rgb;
         float d = (vWZ - uRampZ0) / uRampSpacing;
         float pool = pow(0.5 + 0.5*cos(6.28318*d), 1.6);
-        float light = mix(1.0, 0.55 + 0.9*pool, clamp(uRampBright, 0.0, 2.0));
-        // Fondu de proximite : sur les facades tres proches vues en angle rasant, un pool
-        // plein s'etale en pan lave a frontiere visible ; on uniformise sous ~6 m.
-        light = mix(1.0, light, smoothstep(2.0, 6.0, vDist));
+        // Amplitude volontairement douce (+-15 %) : au-dela, deux baies adjacentes en phases
+        // opposees creent un pan pale a frontiere nette (bord de baie), lisible comme un bug.
+        float light = mix(1.0, 0.82 + 0.30*pool, clamp(uRampBright, 0.0, 2.0));
+        // Fondu de proximite vers la LUMINOSITE MOYENNE (pas vers 1.0, sinon la baie proche
+        // reste plus claire que les creux voisins) : sous ~6 m la modulation s'efface.
+        float lightAvg = mix(1.0, 0.93, clamp(uRampBright, 0.0, 2.0));
+        light = mix(lightAvg, light, smoothstep(2.0, 6.0, vDist));
         vec3 col = tex * uBright * light;
         float f = 1.0 - exp(-uFogDensity*uFogDensity*vDist*vDist);
         gl_FragColor = vec4(mix(col, uFogColor, clamp(f,0.0,1.0)), 1.0);
@@ -587,5 +594,5 @@ if (renderer) {
       : window.addEventListener('load', idle, { once: true });
   } // sinon : reduced-motion -> le poster reste, le moteur 3D ne démarre jamais
 
-  window.DC = { DEFAULTS, config, PALETTES, applyLive, buildLEDs, capturePoster, regen(){ seed=Math.floor(Math.random()*1e9); buildLEDs(); }, stats };
+  window.DC = { build: DC_BUILD, DEFAULTS, config, PALETTES, applyLive, buildLEDs, capturePoster, regen(){ seed=Math.floor(Math.random()*1e9); buildLEDs(); }, stats };
 }

@@ -54,5 +54,5 @@ export function buildPanel(ctx){
   const perf = document.createElement('div');
   perf.style.cssText = 'margin-top:10px;font-size:11px;color:#9a92ad;font-variant-numeric:tabular-nums;';
   controls.appendChild(perf);
-  setInterval(() => { const s = getStats(); perf.textContent = `${s.ms.toFixed(2)} ms/frame (CPU) · ${s.calls} draw calls`; }, 500);
+  setInterval(() => { const s = getStats(); const b = (window.DC && window.DC.build) || '?'; perf.textContent = `${s.ms.toFixed(2)} ms/frame (CPU) · ${s.calls} draw calls · ${b}`; }, 500);
 }
