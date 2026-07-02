@@ -272,6 +272,51 @@ export function makeFloorTexture(){
   return t;
 }
 
+// Texture d'écran de logs : pseudo-terminal (lignes de log défilantes), répétée en Y par le shader.
+export function makeLogTexture(){
+  const W=256, H=512;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const x=c.getContext('2d'); const rnd=mulberry32(90210);
+  x.fillStyle='#04070a'; x.fillRect(0,0,W,H);
+  x.font='7px monospace';
+  const COLS=['#39ff9a','#c9a0ff','#d8dbe2','#ffcf4d','#37c0ff'];
+  const WORDS=['[ ok ]','[warn]','probe','sync','eth0','bgp','ipmi','fan2','42.1C','psu-a','raid','scrub','vlan','tls'];
+  for(let y=10; y<H-4; y+=10){
+    let lx=6;
+    const n=2+Math.floor(rnd()*4);
+    for(let i=0;i<n;i++){
+      x.fillStyle=COLS[Math.floor(rnd()*COLS.length)];
+      x.globalAlpha=0.5+rnd()*0.5;
+      const w = rnd()<0.5 ? WORDS[Math.floor(rnd()*WORDS.length)]
+                          : (Math.floor(rnd()*0xffff)).toString(16).padStart(4,'0');
+      x.fillText(w, lx, y); lx += 8 + w.length*4.6 + rnd()*14;
+      if(lx>W-30) break;
+    }
+    if(rnd()<0.12){ x.fillStyle='#39ff9a'; x.globalAlpha=0.7;
+      x.fillRect(6, y+2, 40+rnd()*160, 2.5); }
+    x.globalAlpha=1;
+  }
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=THREE.ClampToEdgeWrapping; t.wrapT=THREE.RepeatWrapping;
+  t.colorSpace=THREE.SRGBColorSpace;
+  return t;
+}
+
+// Texture de chemin de câbles : grille métallique (tôle perforée), répétée en X et Z.
+export function makeTrayTexture(){
+  const c=document.createElement('canvas'); c.width=64; c.height=256;
+  const x=c.getContext('2d');
+  x.fillStyle='#0b0d11'; x.fillRect(0,0,64,256);
+  x.strokeStyle='rgba(140,150,175,0.16)'; x.lineWidth=2;
+  for(let z=0; z<256; z+=16){ x.beginPath(); x.moveTo(4,z); x.lineTo(60,z); x.stroke(); }
+  x.strokeStyle='rgba(140,150,175,0.22)';
+  x.beginPath(); x.moveTo(4,0); x.lineTo(4,256); x.stroke();
+  x.beginPath(); x.moveTo(60,0); x.lineTo(60,256); x.stroke();
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=THREE.RepeatWrapping; t.wrapT=THREE.RepeatWrapping;
+  return t;
+}
+
 // Texture de lueur : dégradé radial blanc -> transparent, réutilisée pour le fond d'allée
 // (et la tâche 7).
 export function makeGlowTexture(size=128){

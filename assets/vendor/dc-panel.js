@@ -12,10 +12,12 @@ export function buildPanel(ctx){
     { key:'density', label:'Densité', min:0.4, max:2, step:0.05, fmt:v=>v.toFixed(2) },
     { key:'ledSize', label:'Taille', min:0.01, max:0.12, step:0.005, fmt:v=>v.toFixed(3) },
     { key:'glow', label:'Bloom / lueur', min:0, max:2, step:0.05, fmt:v=>v.toFixed(2) },
+    { key:'traffic', label:'Trafic réseau', min:0, max:1, step:0.05, fmt:v=>v.toFixed(2) },
     { group:'Éclairage' },
     { key:'ramp', label:'Rampes plafond', min:0, max:2, step:0.05, fmt:v=>v.toFixed(2) },
     { key:'shaft', label:'Faisceaux', min:0, max:1, step:0.05, fmt:v=>v.toFixed(2) },
     { key:'dust', label:'Poussière', min:0, max:1, step:0.05, fmt:v=>v.toFixed(2) },
+    { key:'screens', label:'Écrans (vitesse)', min:0, max:3, step:0.1, fmt:v=>v.toFixed(1) },
     { group:'Lisibilité' },
     { key:'veil', label:'Voile central', min:0, max:1, step:0.02, fmt:v=>v.toFixed(2) }
   ];

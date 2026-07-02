@@ -9,13 +9,13 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { mulberry32, makeFacadeAtlas, makeFloorTexture, makeGlowTexture } from './dc-textures.js';
+import { mulberry32, makeFacadeAtlas, makeFloorTexture, makeGlowTexture, makeLogTexture, makeTrayTexture } from './dc-textures.js';
 
 const DEFAULTS = {
   camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045,
   glow: 1.20, fog: 0.025, veil: 0.32, palette: 'datacenter',
   bg: '#04060a', theme: 'dark', mirror: 1, ramp: 1.0,
-  shaft: 0.5, dust: 0.5
+  shaft: 0.5, dust: 0.5, screens: 1.0, traffic: 0.6
 };
 let config = Object.assign({}, DEFAULTS, (window.DC_CONFIG || {}));
 
@@ -138,11 +138,11 @@ if (renderer) {
   });
 
   const ledMat = new THREE.ShaderMaterial({
-    uniforms: { uTime:{value:0}, uSize:{value:config.ledSize}, uHeight:{value:600}, uBlink:{value:config.blink}, uMaxSize:{value:16}, uFog:{value:config.fog}, uFogColor:{value:new THREE.Color(config.bg)} },
+    uniforms: { uTime:{value:0}, uSize:{value:config.ledSize}, uHeight:{value:600}, uBlink:{value:config.blink}, uMaxSize:{value:16}, uFog:{value:config.fog}, uFogColor:{value:new THREE.Color(config.bg)}, uTraffic:{value:config.traffic} },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     vertexShader: `
-      attribute vec3 aColor; attribute float aPhase; attribute float aRate; attribute float aBase;
-      uniform float uTime, uSize, uHeight, uBlink, uMaxSize;
+      attribute vec3 aColor; attribute float aPhase; attribute float aRate; attribute float aBase; attribute float aTr;
+      uniform float uTime, uSize, uHeight, uBlink, uMaxSize, uTraffic;
       varying vec3 vColor; varying float vB;
       void main(){
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -150,7 +150,10 @@ if (renderer) {
         gl_Position = projectionMatrix * mv;
         gl_PointSize = min(uMaxSize, uSize * uHeight / max(dist, 0.1));
         float blink = 0.5 + 0.5 * sin(uTime * uBlink * aRate + aPhase * 6.2831);
+        float slot2 = floor(uTime*(1.5 + aRate*2.0) + aPhase*97.0);
+        float burst = step(0.86, fract(sin(slot2*12.9898 + aPhase*78.233)*43758.5453));
         float b = aBase * mix(0.9, blink, step(0.12, aRate));
+        b = mix(b, aBase*(0.25 + 1.05*burst), aTr*uTraffic);
         vColor = aColor; vB = clamp(b, 0.0, 1.4);
       }
     `,
@@ -164,13 +167,73 @@ if (renderer) {
     `
   });
 
+  // Écrans instanciés : petits moniteurs de logs semés sur les façades (une même sélection
+  // de rangées pour les deux périodes -> wrap invisible).
+  const screenGeo = new THREE.PlaneGeometry(0.62, 0.44);
+  const screenMat = new THREE.ShaderMaterial({
+    uniforms: { uMap:{value:makeLogTexture()}, uTime:{value:0}, uSpeed:{value:config.screens} },
+    side: THREE.DoubleSide,
+    vertexShader: `
+      attribute float aPhase;
+      // instanceMatrix est déclaré automatiquement par three r160 (ShaderMaterial + InstancedMesh)
+      varying vec2 vUv; varying float vPh;
+      void main(){
+        vUv = uv; vPh = aPhase;
+        gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform sampler2D uMap; uniform float uTime, uSpeed;
+      varying vec2 vUv; varying float vPh;
+      void main(){
+        vec2 uv = vec2(vUv.x, fract(vUv.y*0.5 + uTime*0.02*uSpeed + vPh));
+        vec3 col = texture2D(uMap, uv).rgb * 1.5;
+        float scan = 0.92 + 0.08*sin(vUv.y*240.0);
+        float edge = smoothstep(0.0,0.06,vUv.x)*smoothstep(1.0,0.94,vUv.x)
+                   * smoothstep(0.0,0.09,vUv.y)*smoothstep(1.0,0.91,vUv.y);
+        gl_FragColor = vec4(col*scan*edge + vec3(0.01,0.02,0.015), 1.0);
+      }`
+  });
+  function buildScreens(){
+    const scr = [];
+    for(const s of slots){
+      if (mulberry32((s.r*2654435761 ^ (s.side===1?7:11))>>>0)() < 0.14) scr.push(s);
+    }
+    const screensIM = new THREE.InstancedMesh(screenGeo, screenMat, scr.length);
+    const ph = new Float32Array(scr.length);
+    scr.forEach((s, i) => {
+      const rnd = mulberry32((s.r*97 + 5)>>>0);
+      _qF.setFromAxisAngle(new THREE.Vector3(0,1,0), -s.side*Math.PI/2);
+      setInst(screensIM, i, s.side*(FACE_X - 0.035), 1.4 + rnd()*1.8, s.z + (rnd()-0.5)*0.8, _qF, 0);
+      ph[i] = rnd();
+    });
+    screensIM.geometry = screenGeo.clone();
+    screensIM.geometry.setAttribute('aPhase', new THREE.InstancedBufferAttribute(ph, 1));
+    screensIM.instanceMatrix.needsUpdate = true; screensIM.frustumCulled = false;
+    worldGroup.add(screensIM);
+  }
+
   function buildStatics(){
     // L et zC : étendue (Z) et centre du monde statique (2 périodes + marge) ; réutilisés par
     // le sol, les rails/plafond ci-dessous et (tâche 7) le fond d'allée.
     const L = PERIODS*TUNNEL + 24, zC = Z0 - PERIODS*TUNNEL/2;
+    // Chemins de câbles : plateau de tôle perforée (grillage) suspendu au plafond, avec 3 câbles
+    // qui y courent (remplace les 2 rails pleins de la tâche 3, trop nus pour un vrai datacenter).
+    const trayTex = makeTrayTexture();
+    trayTex.repeat.set(1, L/2);
+    const trayMat = new THREE.MeshStandardMaterial({ map: trayTex, color: 0xffffff,
+      roughness: 0.7, metalness: 0.6, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+    const cableColors = [0x241a38, 0x101018, 0x1e1030];
     for(let side=-1; side<=1; side+=2){
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.18,L), new THREE.MeshStandardMaterial({ color:0x0a0b10, roughness:0.8, metalness:0.6 }));
-      rail.position.set(side*1.5, RACK_H+0.45, zC); worldGroup.add(rail);
+      const tray = new THREE.Mesh(new THREE.PlaneGeometry(0.55, L), trayMat);
+      tray.rotation.x = Math.PI/2; tray.position.set(side*1.45, RACK_H+0.5, zC);
+      worldGroup.add(tray);
+      for(let ci=0; ci<3; ci++){
+        const cbl = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, L, 6),
+          new THREE.MeshStandardMaterial({ color: cableColors[ci], roughness: 0.85 }));
+        cbl.rotation.x = Math.PI/2;
+        cbl.position.set(side*1.45 - 0.14 + ci*0.14, RACK_H+0.56, zC);
+        worldGroup.add(cbl);
+      }
     }
     const ceil = new THREE.Mesh(new THREE.PlaneGeometry(14, L), new THREE.MeshStandardMaterial({ color:0x070809, roughness:0.95, metalness:0.2 }));
     ceil.rotation.x = Math.PI/2; ceil.position.set(0, RACK_H+1.15, zC); worldGroup.add(ceil);
@@ -339,12 +402,12 @@ if (renderer) {
     const ledZ = RACK_Z*0.86;
     if(ledPoints){ ledPoints.geometry.dispose(); scene.remove(ledPoints); ledPoints = null; }
     // Un seul Points global (monde + miroir) au lieu d'un Points par baie.
-    const pos=[],col=[],pha=[],rate=[],base=[];
+    const pos=[],col=[],pha=[],rate=[],base=[],tr=[];
     for(const s of slots){
       // Graine par (seed, r, side) uniquement (jamais par p) : les 2 périodes restent identiques -> pas de saut au wrap.
       const rnd = mulberry32(((seed ^ (s.r*73856093) ^ (s.side===1?19349663:0))>>>0) || 1);
       const x = s.side*(FACE_X - 0.032);
-      const addLED=(yy,zz,c,fixed,b)=>{ pos.push(x,yy,s.z+zz); col.push(c.r,c.g,c.b); pha.push(rnd()); rate.push(fixed?0.03:0.5+rnd()*2.2); base.push(b); };
+      const addLED=(yy,zz,c,fixed,b,isTraffic)=>{ pos.push(x,yy,s.z+zz); col.push(c.r,c.g,c.b); pha.push(rnd()); rate.push(fixed?0.03:0.5+rnd()*2.2); base.push(b); tr.push(isTraffic?1:0); };
       const z0 = -ledZ/2;
       let uu=0;
       while(uu<U){
@@ -360,15 +423,16 @@ if (renderer) {
         const lineFixed = rnd()<0.7; const lineB = 0.8+rnd()*0.4;
         for(let k=0;k<nLed;k++){
           const z = zStart + (k/(nLed-1))*usable;
-          let c=main, fixed=lineFixed, b=lineB; const accent=rnd();
-          if(accent<0.06){ c=new THREE.Color().setHSL(45/360,0.95,0.6); fixed=false; b=1.1; }
+          let c=main, fixed=lineFixed, b=lineB, isTraffic=false; const accent=rnd();
+          // L'accent (6% des LED, façon switch réseau) marque une LED d'activité : rafales pilotées par uTraffic côté shader.
+          if(accent<0.06){ c=new THREE.Color().setHSL(45/360,0.95,0.6); fixed=false; b=1.1; isTraffic=true; }
           else if(accent<0.085){ c=new THREE.Color().setHSL(0,0.9,0.58); fixed=false; b=1.0; }
           else if(accent<0.16){ c=new THREE.Color().setHSL(0,0,0.96); fixed=true; b=1.0; }
-          addLED(yc, z, c, fixed, b);
+          addLED(yc, z, c, fixed, b, isTraffic);
         }
         if(span===2 && rnd()<0.6){
           const y2=yc-uH*0.55; const n2=Math.round(nLed*0.7);
-          for(let k=0;k<n2;k++){ const z=zStart+(k/(n2-1))*usable*0.9; addLED(y2,z,main, rnd()<0.8, lineB*0.85); }
+          for(let k=0;k<n2;k++){ const z=zStart+(k/(n2-1))*usable*0.9; addLED(y2,z,main, rnd()<0.8, lineB*0.85, false); }
         }
       }
     }
@@ -379,7 +443,7 @@ if (renderer) {
       for(let i=0;i<nW;i++){
         pos.push(pos[i*3], -pos[i*3+1], pos[i*3+2]);
         col.push(col[i*3], col[i*3+1], col[i*3+2]);
-        pha.push(pha[i]); rate.push(rate[i]); base.push(base[i]*0.4);
+        pha.push(pha[i]); rate.push(rate[i]); base.push(base[i]*0.4); tr.push(tr[i]);
       }
     }
     const g=new THREE.BufferGeometry();
@@ -388,6 +452,7 @@ if (renderer) {
     g.setAttribute('aPhase', new THREE.Float32BufferAttribute(pha,1));
     g.setAttribute('aRate', new THREE.Float32BufferAttribute(rate,1));
     g.setAttribute('aBase', new THREE.Float32BufferAttribute(base,1));
+    g.setAttribute('aTr', new THREE.Float32BufferAttribute(tr,1));
     ledPoints = new THREE.Points(g, ledMat); ledPoints.frustumCulled=false; scene.add(ledPoints);
   }
 
@@ -398,7 +463,10 @@ if (renderer) {
     scene.fog.density = config.fog; scene.fog.color.set(config.bg);
     ledMat.uniforms.uFog.value = config.fog; ledMat.uniforms.uSize.value = config.ledSize;
     ledMat.uniforms.uBlink.value = config.blink; ledMat.uniforms.uFogColor.value.set(config.bg);
+    ledMat.uniforms.uTraffic.value = config.traffic;
     faceMat.uniforms.uFogColor.value.set(config.bg); faceMat.uniforms.uFogDensity.value = config.fog;
+    // Vie du datacenter (tâche 8) : vitesse de défilement des écrans de logs.
+    screenMat.uniforms.uSpeed.value = config.screens;
     // Éclairage cuit : rampes plafond (couleur + intensité) et modulation des façades sous les pools.
     rampMat.color.setScalar(0.75 + 1.5*config.ramp);           // blanc chaud -> le bloom fait le halo
     faceMat.uniforms.uRampBright.value = config.ramp;
@@ -427,6 +495,7 @@ if (renderer) {
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016); last = now;
     const time = (now-t0)/1000;
     ledMat.uniforms.uTime.value = time;
+    screenMat.uniforms.uTime.value = time;
     camZ -= config.camSpeed*dt;
     if (camZ < Z_CAM - TUNNEL) camZ += TUNNEL;
     dustMat.uniforms.uTime.value = time; dustMat.uniforms.uCamZ.value = camZ;
@@ -448,7 +517,7 @@ if (renderer) {
   }
   window.addEventListener('resize', resize);
 
-  buildStatics(); buildAtmosphere(); buildRacks(); buildLEDs();
+  buildStatics(); buildAtmosphere(); buildRacks(); buildLEDs(); buildScreens();
   resize(); applyLive();
   if (window.DC_PANEL) import('./dc-panel.js').then(m => m.buildPanel({
     config, DEFAULTS, applyLive, buildLEDs,
