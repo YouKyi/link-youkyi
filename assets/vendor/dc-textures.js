@@ -58,22 +58,45 @@ export function drawUnit(x, ox, oy, w, h, rnd){
   for(let k=0;k<ny;k++){ const cc=['#39ff9a','#37c0ff','#ffffff','#ffcf4d','#ff5b5b'][Math.floor(rnd()*5)]; x.fillStyle=cc; x.globalAlpha=0.6+rnd()*0.4; x.fillRect(ox+w-24,oy+h-6-k*4,3,2.5); }
   x.globalAlpha=1;
 }
-export function makeRackTexture(sd){
-  const rnd=mulberry32(sd); const W=512,H=1024; const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
+// Corps de dessin d'une façade « mesh » (ex-makeRackTexture), sans canvas ni texture :
+// dessine en coordonnees 512x1024 dans le contexte fourni (le scale de l'appelant gere la resolution).
+function drawRackInto(x, sd){
+  const rnd=mulberry32(sd); const W=512,H=1024;
   const bg=x.createLinearGradient(0,0,W,0); bg.addColorStop(0,'#0b0d12'); bg.addColorStop(0.5,'#0f1217'); bg.addColorStop(1,'#090b10'); x.fillStyle=bg; x.fillRect(0,0,W,H);
   for(let yy=22;yy<H-22;yy+=7) for(let xx=42;xx<W-42;xx+=7){ x.fillStyle='rgba(0,0,0,0.6)'; x.beginPath(); x.arc(xx,yy,1.5,0,6.2831); x.fill(); x.fillStyle='rgba(150,170,200,0.05)'; x.fillRect(xx-1,yy-1,1,1); }
   let g1=x.createLinearGradient(0,0,34,0); g1.addColorStop(0,'#30353d'); g1.addColorStop(1,'#13161b'); x.fillStyle=g1; x.fillRect(0,0,30,H);
   let g2=x.createLinearGradient(W-34,0,W,0); g2.addColorStop(0,'#13161b'); g2.addColorStop(1,'#30353d'); x.fillStyle=g2; x.fillRect(W-30,0,30,H);
   for(let s=1;s<3;s++){ const yy=H*s/3; x.fillStyle='rgba(0,0,0,0.65)'; x.fillRect(30,yy-1,W-60,2); x.fillStyle='rgba(255,255,255,0.05)'; x.fillRect(30,yy+1,W-60,1); }
   const hx=rnd()<0.5?52:W-62; x.fillStyle='#20242b'; x.fillRect(hx,H*0.4,10,H*0.2); x.fillStyle='rgba(255,255,255,0.10)'; x.fillRect(hx,H*0.4,2,H*0.2);
-  const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=16; return t;
 }
-export function makeServerTexture(sd){
-  const rnd=mulberry32(sd); const W=512,H=1024; const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
+// Corps de dessin d'une façade « serveur » (ex-makeServerTexture), memes conventions.
+function drawServerInto(x, sd){
+  const rnd=mulberry32(sd); const W=512,H=1024;
   x.fillStyle='#06080b'; x.fillRect(0,0,W,H);
   let g1=x.createLinearGradient(0,0,28,0); g1.addColorStop(0,'#23272e'); g1.addColorStop(1,'#0c0e12'); x.fillStyle=g1; x.fillRect(0,0,26,H);
   let g2=x.createLinearGradient(W-28,0,W,0); g2.addColorStop(0,'#14171c'); g2.addColorStop(1,'#363c45'); x.fillStyle=g2; x.fillRect(W-26,0,26,H);
   for(let yy=16;yy<H;yy+=46){ drawScrew(x,12,yy); drawScrew(x,W-12,yy); }
   let y=8; while(y<H-8){ const uH=(rnd()<0.16)?(26+rnd()*10):(40+rnd()*60); drawUnit(x,30,y,W-60,Math.min(uH,H-8-y),rnd); y+=uH+3; }
-  const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=16; return t;
+}
+// Dessine une façade dans la région (ox, oy, w, h) du contexte partagé.
+// Le corps reste en coordonnees 512x1024 : translate + scale gerent l'offset et la resolution de tuile.
+function drawFacadeTile(x, ox, oy, w, h, seed, kind){
+  x.save(); x.translate(ox, oy); x.scale(w/512, h/1024);
+  if (kind === 'mesh') drawRackInto(x, seed);
+  else                 drawServerInto(x, seed);
+  x.restore();
+}
+// Atlas de 8 façades (4 colonnes x 2 lignes). Tuile k a l'offset UV ((k%4)/4, 1 - (floor(k/4)+1)/2).
+export function makeFacadeAtlas(maxTexSize){
+  const big = maxTexSize >= 4096;
+  const tw = big ? 1024 : 512, th = big ? 2048 : 1024;   // tuile
+  const c = document.createElement('canvas'); c.width = tw*4; c.height = th*2;
+  const x = c.getContext('2d');
+  const KINDS = ['mesh','mesh','server','server','server','server','server','server'];
+  for(let k=0;k<8;k++){
+    drawFacadeTile(x, (k%4)*tw, Math.floor(k/4)*th, tw, th, 3000 + k*277, KINDS[k]);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16;
+  return { texture: t, cols: 4, rows: 2, tiles: 8 };
 }

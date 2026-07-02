@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { mulberry32, makeRackTexture, makeServerTexture } from './dc-textures.js';
+import { mulberry32, makeFacadeAtlas } from './dc-textures.js';
 
 const DEFAULTS = {
   camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045,
@@ -63,17 +63,11 @@ if (renderer) {
   const Z0 = 4, Z_CAM = 2.0, TUNNEL = ROWS * SPACING;
 
   const worldGroup = new THREE.Group(); scene.add(worldGroup);
-  let units = [];
 
-  // Monde miroir : clone à l'envers (scale.y = -1) de tout ce qui doit se refléter sous le sol
-  // (y=0), au lieu d'un second rendu de scène (Reflector) -> même passe, deux fois moins cher.
-  const mirrorGroup = new THREE.Group();
-  mirrorGroup.scale.y = -1;
-  scene.add(mirrorGroup);
-  function buildMirror(){
-    mirrorGroup.clear();
-    for(const u of units){ mirrorGroup.add(u.clone()); }
-  }
+  // Baies instanciées : ~4 InstancedMesh au lieu de 272 Groups. Le miroir (sous le sol) n'est plus
+  // un Group cloné (scale.y = -1) mais la seconde moitié des instances -> encore une passe, moins d'objets.
+  const FACE_RECESS = 0.10;          // renfoncement de la façade dans le caisson
+  let slots = [], casesIM, facesIM, pillarsIM, ledPoints = null, ledMirror = -1;
 
   const PALETTES = {
     green: [[128,0.95,0.58,9],[118,0.92,0.54,4],[140,0.85,0.56,2],[150,0.8,0.6,1.5],[212,0.95,0.62,2.2],[225,0.9,0.64,1.2]],
@@ -90,18 +84,55 @@ if (renderer) {
   };
   function pickColor(rnd, pal){ let tot=0; for(const p of pal)tot+=p[3]; let r=rnd()*tot; for(const p of pal){ r-=p[3]; if(r<=0)return p; } return pal[0]; }
 
-  const rackMat = new THREE.MeshStandardMaterial({ color: 0x060709, roughness: 0.5, metalness: 0.85 });
+  // side: DoubleSide partout car les instances miroir ont un scale.y = -1 (culling inversé).
+  const rackMat = new THREE.MeshStandardMaterial({ color: 0x060709, roughness: 0.5, metalness: 0.85, side: THREE.DoubleSide });
   const rackGeo = new THREE.BoxGeometry(RACK_W, RACK_H, RACK_Z);
-  const meshMats = []; for(let i=0;i<3;i++){ const tex=makeRackTexture(1000+i*137); meshMats.push(new THREE.MeshStandardMaterial({ map:tex, emissive:0xc79fff, emissiveMap:tex, emissiveIntensity:0.12, roughness:0.62, metalness:0.5 })); }
-  const serverMats = []; for(let i=0;i<3;i++){ const tex=makeServerTexture(2000+i*211); serverMats.push(new THREE.MeshStandardMaterial({ map:tex, emissive:0xc79fff, emissiveMap:tex, emissiveIntensity:0.14, roughness:0.58, metalness:0.45 })); }
-  const handleGeo = new THREE.BoxGeometry(0.05, RACK_H*0.32, 0.10);
-  const handleMat = new THREE.MeshStandardMaterial({ color: 0x04050a, roughness: 0.35, metalness: 0.6 });
   const faceGeo = new THREE.PlaneGeometry(RACK_Z*0.97, RACK_H*0.992);
-  // mirrorGroup a un scale.y = -1 : ça inverse le culling des faces -> double face requis.
-  rackMat.side = THREE.DoubleSide;
-  for(const m of meshMats) m.side = THREE.DoubleSide;
-  for(const m of serverMats) m.side = THREE.DoubleSide;
-  handleMat.side = THREE.DoubleSide;
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x14161c, roughness: 0.45, metalness: 0.7, side: THREE.DoubleSide });
+
+  // Atlas de façades (8 tuiles) -> un seul ShaderMaterial remplace les 6 MeshStandardMaterial + textures.
+  const atlas = makeFacadeAtlas(renderer.capabilities.maxTextureSize);
+  const faceMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uAtlas: { value: atlas.texture },
+      uTileScale: { value: new THREE.Vector2(1/atlas.cols, 1/atlas.rows) },
+      uBright: { value: 1.0 },
+      uFogColor: { value: new THREE.Color(config.bg) },
+      uFogDensity: { value: config.fog },
+      uRampSpacing: { value: SPACING*2 },   // utilisés à partir de la tâche 6
+      uRampZ0: { value: 0 },
+      uRampBright: { value: 0 },             // 0 = modulation neutre pour l'instant
+    },
+    // three r160 : pour un ShaderMaterial rendu par un InstancedMesh, three declare deja
+    // `attribute mat4 instanceMatrix;` (prefixe USE_INSTANCING). On ne le redeclare donc PAS ici
+    // (une double declaration serait une erreur GLSL) ; on l'utilise directement dans main().
+    vertexShader: `
+      attribute vec2 aTile;
+      varying vec2 vUv; varying vec2 vTile; varying float vWZ; varying float vDist;
+      void main(){
+        vUv = uv; vTile = aTile;
+        vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+        vWZ = wp.z;
+        vec4 mv = viewMatrix * wp;
+        vDist = -mv.z;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform sampler2D uAtlas; uniform vec2 uTileScale;
+      uniform float uBright, uFogDensity, uRampSpacing, uRampZ0, uRampBright;
+      uniform vec3 uFogColor;
+      varying vec2 vUv; varying vec2 vTile; varying float vWZ; varying float vDist;
+      void main(){
+        vec3 tex = texture2D(uAtlas, vUv * uTileScale + vTile).rgb;
+        float d = (vWZ - uRampZ0) / uRampSpacing;
+        float pool = pow(0.5 + 0.5*cos(6.28318*d), 1.6);
+        float light = mix(1.0, 0.55 + 0.9*pool, clamp(uRampBright, 0.0, 2.0));
+        vec3 col = tex * uBright * light;
+        float f = 1.0 - exp(-uFogDensity*uFogDensity*vDist*vDist*2.0);
+        gl_FragColor = vec4(mix(col, uFogColor, clamp(f,0.0,1.0)), 1.0);
+      }`,
+    side: THREE.DoubleSide,
+  });
 
   const ledMat = new THREE.ShaderMaterial({
     uniforms: { uTime:{value:0}, uSize:{value:config.ledSize}, uHeight:{value:600}, uBlink:{value:config.blink}, uMaxSize:{value:16}, uFog:{value:config.fog}, uFogColor:{value:new THREE.Color(config.bg)} },
@@ -141,22 +172,56 @@ if (renderer) {
     floor.rotation.x = -Math.PI/2; floor.position.set(0,0.002,Z0-PERIODS*TUNNEL/2); worldGroup.add(floor);
   }
 
-  function buildRacks(){
-    for(let p=0; p<PERIODS; p++){
-      for(let side=-1; side<=1; side+=2){
+  function buildSlots(){
+    slots = [];
+    for(let p=0; p<PERIODS; p++)
+      for(let side=-1; side<=1; side+=2)
         for(let r=0; r<ROWS; r++){
-          const zc = Z0 - p*TUNNEL - r*SPACING - SPACING/2;
-          const u = new THREE.Group(); u.position.set(0,0,zc); u.userData = { side, r };
-          const m = new THREE.Mesh(rackGeo, rackMat); m.position.set(side*RACK_X, RACK_H/2+0.05, 0); u.add(m);
-          // Sélection déterministe par (side, r) uniquement : jamais par p ni par l'ordre d'appel,
+          // Graine déterministe par (side, r) uniquement : jamais par p ni par l'ordre d'appel,
           // sinon les deux périodes divergeraient et le wrap deviendrait visible.
-          const rndF = mulberry32(((r*73856093) ^ (side===1?19349663:97)) >>> 0);
-          const faceMat = (rndF()<0.22) ? meshMats[Math.floor(rndF()*meshMats.length)] : serverMats[Math.floor(rndF()*serverMats.length)];
-          const f = new THREE.Mesh(faceGeo, faceMat); f.position.set(side*(FACE_X-0.02), RACK_H/2+0.05, 0); f.rotation.y = -side*Math.PI/2; u.add(f);
-          const handle = new THREE.Mesh(handleGeo, handleMat); handle.position.set(side*(FACE_X-0.06), RACK_H*0.5, (rndF()<0.5?-RACK_Z*0.40:RACK_Z*0.40)); u.add(handle);
-          units.push(u); worldGroup.add(u);
+          const rnd = mulberry32(((r*73856093) ^ (side===1?19349663:97)) >>> 0);
+          slots.push({ side, r, p, z: Z0 - p*TUNNEL - r*SPACING - SPACING/2,
+                       variant: Math.floor(rnd()*8) });
         }
+  }
+
+  const _m = new THREE.Matrix4(), _p = new THREE.Vector3(),
+        _q = new THREE.Quaternion(), _qF = new THREE.Quaternion(),
+        _s1 = new THREE.Vector3(1,1,1), _sM = new THREE.Vector3(1,-1,1);
+
+  function setInst(im, i, x, y, z, quat, mirrored){
+    _p.set(x, mirrored ? -y : y, z);
+    _m.compose(_p, quat || _q.identity(), mirrored ? _sM : _s1);
+    im.setMatrixAt(i, _m);
+  }
+
+  function buildRacks(){
+    buildSlots();
+    const N = slots.length;                                  // 136
+    casesIM  = new THREE.InstancedMesh(rackGeo, rackMat, N*2);
+    facesIM  = new THREE.InstancedMesh(faceGeo, faceMat, N*2);
+    const pillarGeo = new THREE.BoxGeometry(0.07, RACK_H, 0.13);
+    pillarsIM = new THREE.InstancedMesh(pillarGeo, pillarMat, N*4);   // 2 montants par baie
+    const tiles = new Float32Array(N*2*2);                   // offset UV par instance de face
+    // Remplissage monde d'abord (indices [0..N-1]) puis miroir ([N..2N-1]) ; pillarsIM : monde
+    // [0..2N-1], miroir [2N..4N-1] (via j*2). L'ordre permet à applyLive() de tronquer via im.count.
+    slots.forEach((s, i) => {
+      for(const mir of [0,1]){
+        const j = i + mir*N;
+        setInst(casesIM, j, s.side*RACK_X, RACK_H/2+0.05, s.z, null, mir);
+        _qF.setFromAxisAngle(new THREE.Vector3(0,1,0), -s.side*Math.PI/2);
+        setInst(facesIM, j, s.side*(FACE_X - FACE_RECESS), RACK_H/2+0.05, s.z, _qF, mir);
+        tiles[j*2]   = (s.variant%4)/4;
+        tiles[j*2+1] = 1 - (Math.floor(s.variant/4)+1)/2;
+        setInst(pillarsIM, j*2,   s.side*(FACE_X-0.02), RACK_H/2+0.05, s.z - RACK_Z*0.44, null, mir);
+        setInst(pillarsIM, j*2+1, s.side*(FACE_X-0.02), RACK_H/2+0.05, s.z + RACK_Z*0.44, null, mir);
       }
+    });
+    // aTile est un attribut PAR INSTANCE : on clone la géométrie pour ne pas le faire fuiter sur faceGeo partagé.
+    facesIM.geometry = faceGeo.clone();
+    facesIM.geometry.setAttribute('aTile', new THREE.InstancedBufferAttribute(tiles, 2));
+    for(const im of [casesIM, facesIM, pillarsIM]){
+      im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; worldGroup.add(im);
     }
   }
 
@@ -166,12 +231,14 @@ if (renderer) {
     const U = Math.max(20, Math.round(34*config.density));
     const uH = (yTop-yBase)/U;
     const ledZ = RACK_Z*0.86;
-    for(const u of units){
-      if(u.userData.led){ u.userData.led.geometry.dispose(); u.remove(u.userData.led); u.userData.led=null; }
-      const rnd = mulberry32(((seed ^ (u.userData.r*73856093) ^ (u.userData.side===1?19349663:0))>>>0) || 1);
-      const x = u.userData.side*(FACE_X-0.012);
-      const pos=[],col=[],pha=[],rate=[],base=[];
-      const addLED=(yy,zz,c,fixed,b)=>{ pos.push(x,yy,zz); col.push(c.r,c.g,c.b); pha.push(rnd()); rate.push(fixed?0.03:0.5+rnd()*2.2); base.push(b); };
+    if(ledPoints){ ledPoints.geometry.dispose(); scene.remove(ledPoints); ledPoints = null; }
+    // Un seul Points global (monde + miroir) au lieu d'un Points par baie.
+    const pos=[],col=[],pha=[],rate=[],base=[];
+    for(const s of slots){
+      // Graine par (seed, r, side) uniquement (jamais par p) : les 2 périodes restent identiques -> pas de saut au wrap.
+      const rnd = mulberry32(((seed ^ (s.r*73856093) ^ (s.side===1?19349663:0))>>>0) || 1);
+      const x = s.side*(FACE_X - FACE_RECESS - 0.012);
+      const addLED=(yy,zz,c,fixed,b)=>{ pos.push(x,yy,s.z+zz); col.push(c.r,c.g,c.b); pha.push(rnd()); rate.push(fixed?0.03:0.5+rnd()*2.2); base.push(b); };
       const z0 = -ledZ/2;
       let uu=0;
       while(uu<U){
@@ -198,15 +265,24 @@ if (renderer) {
           for(let k=0;k<n2;k++){ const z=zStart+(k/(n2-1))*usable*0.9; addLED(y2,z,main, rnd()<0.8, lineB*0.85); }
         }
       }
-      const g=new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
-      g.setAttribute('aColor', new THREE.Float32BufferAttribute(col,3));
-      g.setAttribute('aPhase', new THREE.Float32BufferAttribute(pha,1));
-      g.setAttribute('aRate', new THREE.Float32BufferAttribute(rate,1));
-      g.setAttribute('aBase', new THREE.Float32BufferAttribute(base,1));
-      const pts = new THREE.Points(g, ledMat); pts.frustumCulled=false; u.add(pts); u.userData.led=pts;
     }
-    buildMirror();
+    // Copies miroir sous le sol (y négatif, base atténuée à 40 %) quand le miroir est actif.
+    ledMirror = config.mirror;
+    if(config.mirror !== 0){
+      const nW = base.length;
+      for(let i=0;i<nW;i++){
+        pos.push(pos[i*3], -pos[i*3+1], pos[i*3+2]);
+        col.push(col[i*3], col[i*3+1], col[i*3+2]);
+        pha.push(pha[i]); rate.push(rate[i]); base.push(base[i]*0.4);
+      }
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+    g.setAttribute('aColor', new THREE.Float32BufferAttribute(col,3));
+    g.setAttribute('aPhase', new THREE.Float32BufferAttribute(pha,1));
+    g.setAttribute('aRate', new THREE.Float32BufferAttribute(rate,1));
+    g.setAttribute('aBase', new THREE.Float32BufferAttribute(base,1));
+    ledPoints = new THREE.Points(g, ledMat); ledPoints.frustumCulled=false; scene.add(ledPoints);
   }
 
   function veilCss(){ return `radial-gradient(70% 64% at 50% 48%, ${hexToRgba(config.bg, config.veil*0.92)} 0%, ${hexToRgba(config.bg, config.veil*0.42)} 44%, ${hexToRgba(config.bg, 0)} 74%)`; }
@@ -216,7 +292,11 @@ if (renderer) {
     scene.fog.density = config.fog; scene.fog.color.set(config.bg);
     ledMat.uniforms.uFog.value = config.fog; ledMat.uniforms.uSize.value = config.ledSize;
     ledMat.uniforms.uBlink.value = config.blink; ledMat.uniforms.uFogColor.value.set(config.bg);
-    mirrorGroup.visible = config.mirror !== 0;
+    faceMat.uniforms.uFogColor.value.set(config.bg); faceMat.uniforms.uFogDensity.value = config.fog;
+    // Miroir : les instances miroir sont en seconde moitié -> on tronque via im.count (pas de mirrorGroup).
+    const N = slots.length;
+    for(const im of [casesIM, facesIM, pillarsIM]) if(im) im.count = config.mirror !== 0 ? (im === pillarsIM ? N*4 : N*2) : (im === pillarsIM ? N*2 : N);
+    if(config.mirror !== ledMirror) buildLEDs();   // reconstruit les LED avec/sans copies miroir
     if(veilEl) veilEl.style.background = veilCss();
     document.body.style.background = config.bg;
   }
