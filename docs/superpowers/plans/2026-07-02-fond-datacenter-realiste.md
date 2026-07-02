@@ -755,15 +755,17 @@ rampsIM.instanceMatrix.needsUpdate = true; rampsIM.frustumCulled = false;
 worldGroup.add(rampsIM);
 ```
 
-Fond d'allée : aux deux extrémités de période, un plan de lueur discret :
+Fond d'allée : une lueur discrète CAMÉRA-RELATIVE (comme la poussière), à distance
+constante devant la caméra. Ne PAS la placer en positions monde fixes aux bouts de
+période : la caméra s'en approcherait pendant 204 s puis la traverserait au wrap
+(flash + disparition), cassant la boucle sans saut.
 
 ```js
 const glowMat = new THREE.MeshBasicMaterial({ map: makeGlowTexture(), transparent: true,
   blending: THREE.AdditiveBlending, depthWrite: false, color: 0x8f7ad9, opacity: 0.5 });
-for(const zEnd of [Z0 - TUNNEL - 2, Z0 - 2*TUNNEL - 2]){
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(9, 5), glowMat);
-  glow.position.set(0, 2.2, zEnd); worldGroup.add(glow);
-}
+const endGlow = new THREE.Mesh(new THREE.PlaneGeometry(9, 5), glowMat);
+endGlow.position.set(0, 2.2, Z_CAM - 60); scene.add(endGlow);
+// dans animate() : endGlow.position.z = camZ - 60;
 ```
 
 - [ ] **Step 3 : Brancher la clé `ramp` et la modulation**
@@ -1124,6 +1126,14 @@ if (window.DC_PANEL) {
     : window.addEventListener('load', idle, { once: true });
 } // sinon : reduced-motion -> le poster reste, le moteur ne démarre jamais
 ```
+
+IMPORTANT (intégration) : tout travail lourd exécuté à l'évaluation du module
+(construction de l'atlas de façades, texture de logs) doit migrer DANS `start()`,
+sinon il concurrence le premier rendu de la page et tourne pour rien en
+reduced-motion. De même, les listeners `resize` et `visibilitychange` doivent être
+inertes tant que `start()` n'a pas tourné (garde `started`), sinon un changement
+d'onglet ou un resize en reduced-motion déclenche `animate()` sur une scène jamais
+construite (boucle d'exceptions).
 
 Apparition en fondu : dans `animate()`, après le premier `composer.render()` :
 
