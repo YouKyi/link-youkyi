@@ -14,7 +14,8 @@ import { mulberry32, makeFacadeAtlas, makeFloorTexture, makeGlowTexture } from '
 const DEFAULTS = {
   camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045,
   glow: 1.20, fog: 0.025, veil: 0.32, palette: 'datacenter',
-  bg: '#04060a', theme: 'dark', mirror: 1, ramp: 1.0
+  bg: '#04060a', theme: 'dark', mirror: 1, ramp: 1.0,
+  shaft: 0.5, dust: 0.5
 };
 let config = Object.assign({}, DEFAULTS, (window.DC_CONFIG || {}));
 
@@ -69,6 +70,7 @@ if (renderer) {
   // un Group cloné (scale.y = -1) mais la seconde moitié des instances -> encore une passe, moins d'objets.
   const FACE_RECESS = 0.10;          // renfoncement de la façade dans le caisson
   let slots = [], casesIM, facesIM, pillarsIM, rampsIM, rampMat, NRAMP, ledPoints = null, ledMirror = -1;
+  let shaftMat, dustMat;
 
   const PALETTES = {
     green: [[128,0.95,0.58,9],[118,0.92,0.54,4],[140,0.85,0.56,2],[150,0.8,0.6,1.5],[212,0.95,0.62,2.2],[225,0.9,0.64,1.2]],
@@ -208,6 +210,71 @@ if (renderer) {
     }
   }
 
+  function buildAtmosphere(){
+    // Faux faisceaux volumétriques : un cône texturé (dégradé radial) sous chaque rampe, pointe
+    // en haut, base évasée vers le bas. Pas de miroir : aucun reflet utile sous le sol.
+    const shaftGeo = new THREE.ConeGeometry(1.5, 3.4, 14, 1, true);   // ouvert, pointe en haut
+    const shaftTex = makeGlowTexture(64);
+    shaftTex.wrapS = THREE.ClampToEdgeWrapping;
+    shaftMat = new THREE.MeshBasicMaterial({
+      map: shaftTex, transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false, side: THREE.DoubleSide, color: 0xbcb3e8, opacity: 0.10 });
+    const shaftsIM = new THREE.InstancedMesh(shaftGeo, shaftMat, NRAMP);   // pas de miroir
+    for(let k=0;k<NRAMP;k++) setInst(shaftsIM, k, 0, RACK_H + 1.02 - 1.7, RAMP_Z0 - k*RAMP_SPACING, null, 0);
+    shaftsIM.instanceMatrix.needsUpdate = true; shaftsIM.frustumCulled = false;
+    worldGroup.add(shaftsIM);
+
+    // Poussière flottante : shader autonome (aucune mise à jour CPU par particule), positionnée
+    // relative caméra (ajoutée à `scene`, pas à `worldGroup`) pour ne jamais « claquer » au wrap.
+    const DUST_N = 300, DUST_LEN = 30.0;
+    const dustGeo = new THREE.BufferGeometry();
+    {
+      const p = new Float32Array(DUST_N*3), sd = new Float32Array(DUST_N);
+      const rndD = mulberry32(4242);
+      for(let i=0;i<DUST_N;i++){
+        // concentrées vers le centre d'allée et la hauteur des shafts
+        p[i*3]   = (rndD()*2-1) * (0.6 + rndD()*1.4);
+        p[i*3+1] = 0.4 + rndD()*4.2;
+        p[i*3+2] = rndD()*DUST_LEN;                    // z de départ, replié par le shader
+        sd[i] = rndD();
+      }
+      dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(p,3));
+      dustGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(sd,1));
+    }
+    dustMat = new THREE.ShaderMaterial({
+      uniforms: { uTime:{value:0}, uCamZ:{value:Z_CAM}, uDust:{value:config.dust},
+                  uHeight:{value:600}, uRampSpacing:{value:RAMP_SPACING}, uRampZ0:{value:RAMP_Z0} },
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `
+        attribute float aSeed;
+        uniform float uTime, uCamZ, uDust, uHeight, uRampSpacing, uRampZ0;
+        varying float vA;
+        void main(){
+          vec3 p = position;
+          float z = mod(p.z + uTime*(0.18 + aSeed*0.15), 30.0);
+          p.z = uCamZ + 1.0 - z;
+          p.x += sin(uTime*0.30 + aSeed*40.0)*0.22;
+          p.y += sin(uTime*0.21 + aSeed*70.0)*0.15;
+          // plus visible sous les rampes (dans les shafts)
+          float d = (p.z - uRampZ0)/uRampSpacing;
+          float inShaft = 0.35 + 0.65*pow(0.5+0.5*cos(6.28318*d), 2.0);
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = min(5.0, 0.02*uHeight/max(-mv.z, 0.1));
+          float tw = 0.6 + 0.4*sin(uTime*(0.8+aSeed*2.0) + aSeed*90.0);
+          vA = uDust * inShaft * tw * smoothstep(0.0, 3.0, -mv.z) * smoothstep(28.0, 14.0, -mv.z);
+        }`,
+      fragmentShader: `
+        varying float vA;
+        void main(){
+          vec2 uv = gl_PointCoord - 0.5;
+          float a = smoothstep(0.5, 0.1, length(uv)) * vA * 0.22;
+          gl_FragColor = vec4(vec3(0.82, 0.79, 0.95), a);
+        }`
+    });
+    const dust = new THREE.Points(dustGeo, dustMat); dust.frustumCulled = false; scene.add(dust);
+  }
+
   function buildSlots(){
     slots = [];
     for(let p=0; p<PERIODS; p++)
@@ -336,6 +403,9 @@ if (renderer) {
     rampMat.color.setScalar(0.75 + 1.5*config.ramp);           // blanc chaud -> le bloom fait le halo
     faceMat.uniforms.uRampBright.value = config.ramp;
     faceMat.uniforms.uRampZ0.value = RAMP_Z0;
+    // Atmosphère (tâche 7) : faisceaux volumétriques faux + poussière.
+    shaftMat.opacity = 0.20 * config.shaft;
+    dustMat.uniforms.uDust.value = config.dust;
     // Miroir : les instances miroir sont en seconde moitié -> on tronque via im.count (pas de mirrorGroup).
     const N = slots.length;
     for(const im of [casesIM, facesIM, pillarsIM]) if(im) im.count = config.mirror !== 0 ? (im === pillarsIM ? N*4 : N*2) : (im === pillarsIM ? N*2 : N);
@@ -359,6 +429,7 @@ if (renderer) {
     ledMat.uniforms.uTime.value = time;
     camZ -= config.camSpeed*dt;
     if (camZ < Z_CAM - TUNNEL) camZ += TUNNEL;
+    dustMat.uniforms.uTime.value = time; dustMat.uniforms.uCamZ.value = camZ;
     camera.position.set(Math.sin(time*0.12)*0.10, 1.5+Math.sin(time*0.1)*0.04, camZ);
     camera.lookAt(Math.sin(time*0.05)*0.15, 0.55, camZ-12);
     const tA = performance.now();
@@ -373,10 +444,11 @@ if (renderer) {
     composer.setPixelRatio(dpr); composer.setSize(W,H); bloom.setSize(W,H);
     camera.aspect = W/H; camera.updateProjectionMatrix();
     ledMat.uniforms.uHeight.value = (H*dpr)/(2*Math.tan(THREE.MathUtils.degToRad(FOV/2)));
+    dustMat.uniforms.uHeight.value = ledMat.uniforms.uHeight.value;
   }
   window.addEventListener('resize', resize);
 
-  buildStatics(); buildRacks(); buildLEDs();
+  buildStatics(); buildAtmosphere(); buildRacks(); buildLEDs();
   resize(); applyLive();
   if (window.DC_PANEL) import('./dc-panel.js').then(m => m.buildPanel({
     config, DEFAULTS, applyLive, buildLEDs,

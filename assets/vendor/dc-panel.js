@@ -14,6 +14,8 @@ export function buildPanel(ctx){
     { key:'glow', label:'Bloom / lueur', min:0, max:2, step:0.05, fmt:v=>v.toFixed(2) },
     { group:'Éclairage' },
     { key:'ramp', label:'Rampes plafond', min:0, max:2, step:0.05, fmt:v=>v.toFixed(2) },
+    { key:'shaft', label:'Faisceaux', min:0, max:1, step:0.05, fmt:v=>v.toFixed(2) },
+    { key:'dust', label:'Poussière', min:0, max:1, step:0.05, fmt:v=>v.toFixed(2) },
     { group:'Lisibilité' },
     { key:'veil', label:'Voile central', min:0, max:1, step:0.02, fmt:v=>v.toFixed(2) }
   ];
