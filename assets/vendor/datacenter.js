@@ -9,7 +9,7 @@ import * as THREE from 'three';
 
 // Identifiant de build, affiché dans le panneau du tuner : permet de vérifier
 // d'un coup d'oeil que le navigateur n'exécute pas une version en cache.
-const DC_BUILD = 'b10-rampes-plafonnees';
+const DC_BUILD = 'b11-neons-calmes';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -252,7 +252,7 @@ if (renderer) {
     floor.rotation.x = -Math.PI/2; floor.position.set(0, 0.002, zC); worldGroup.add(floor);
 
     // Rampes plafond instanciées (et leur reflet sous le sol, seconde moitié des instances).
-    const rampGeo = new THREE.BoxGeometry(0.55, 0.06, 1.5);
+    const rampGeo = new THREE.BoxGeometry(0.42, 0.05, 1.25);
     rampMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
     NRAMP = Math.round(PERIODS*TUNNEL/RAMP_SPACING);   // 34
     rampsIM = new THREE.InstancedMesh(rampGeo, rampMat, NRAMP*2);
@@ -278,29 +278,36 @@ if (renderer) {
     // caméra passe à ras) dessine une démarcation verticale nette et un voile laiteux
     // asymétrique sur les baies. L'alpha tombe à zéro au bord (normale perpendiculaire à la
     // vue) et culmine face caméra. Pas de miroir : aucun reflet utile sous le sol.
+    // FrontSide uniquement : en DoubleSide, passer sous un faisceau cumulait les deux parois
+    // du cône face caméra (plein écran) et, avec la rampe + le bloom, éblouissait tout.
     const shaftGeo = new THREE.ConeGeometry(1.5, 3.4, 14, 1, true);   // ouvert, pointe en haut
     shaftMat = new THREE.ShaderMaterial({
       transparent: true, blending: THREE.AdditiveBlending,
-      depthWrite: false, side: THREE.DoubleSide,
+      depthWrite: false, side: THREE.FrontSide,
       uniforms: { uOpacity: { value: 0.10 }, uColor: { value: new THREE.Color(0xbcb3e8) } },
       vertexShader: `
         // instanceMatrix est déclaré automatiquement par three r160 (ShaderMaterial + InstancedMesh)
-        varying float vH; varying float vRim;
+        varying float vH; varying float vRim; varying float vDist;
         void main(){
           vH = uv.y;   // ConeGeometry : v = 1 à la pointe (haut), 0 à la base (bas)
           vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
           vec3 n = normalize(mat3(modelMatrix * instanceMatrix) * normal);
           vec3 v = normalize(cameraPosition - wp.xyz);
           vRim = abs(dot(n, v));
-          gl_Position = projectionMatrix * viewMatrix * wp;
+          vec4 mv = viewMatrix * wp;
+          vDist = -mv.z;
+          gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: `
         uniform float uOpacity; uniform vec3 uColor;
-        varying float vH; varying float vRim;
+        varying float vH; varying float vRim; varying float vDist;
         void main(){
           float rim = pow(clamp(vRim, 0.0, 1.0), 1.4);          // 0 au bord de silhouette
           float grad = smoothstep(0.0, 0.9, vH);                 // lumineux près de la rampe
-          gl_FragColor = vec4(uColor, uOpacity * rim * grad);
+          // Un faisceau ne se voit pas de l'intérieur : fondu total sous ~3 m pour ne
+          // jamais eblouir au passage sous le neon.
+          float nf = smoothstep(3.0, 8.0, vDist);
+          gl_FragColor = vec4(uColor, uOpacity * rim * grad * nf);
         }`
     });
     const shaftsIM = new THREE.InstancedMesh(shaftGeo, shaftMat, NRAMP);   // pas de miroir
@@ -491,9 +498,9 @@ if (renderer) {
     // Éclairage cuit : rampes plafond (couleur + intensité). La modulation des façades a été
     // RETIRÉE (elle créait des pans pâles à frontière nette entre baies voisines) : l'éclairage
     // rythmé est porté par les rampes, les faisceaux et les pools cuits dans le sol.
-    // Emissivite plafonnee (~1.17 a ramp=1) : au-dela, la rampe la plus proche (vue de
-    // dessous, grande a l'ecran) sature le bloom en boule blanche eblouissante.
-    rampMat.color.setScalar(0.72 + 0.45*config.ramp);
+    // Emissivite SOUS le blanc de saturation (~0.95 a ramp=1) : la reglette la plus proche,
+    // vue de dessous, reste une surface eclairee lisible au lieu d'une boule de bloom.
+    rampMat.color.setScalar(0.70 + 0.25*config.ramp);
     // Atmosphère (tâche 7) : faisceaux volumétriques faux + poussière.
     // 0.14 : depuis le fondu de Fresnel, l'energie du faisceau se concentre face camera ;
     // a 0.20 le cumul rampe + faisceau + bloom eblouit au passage sous un neon.
