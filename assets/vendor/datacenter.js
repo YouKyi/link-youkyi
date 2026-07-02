@@ -91,7 +91,10 @@ if (renderer) {
   const rackMat = new THREE.MeshStandardMaterial({ color: 0x060709, roughness: 0.5, metalness: 0.85, side: THREE.DoubleSide });
   const rackGeo = new THREE.BoxGeometry(RACK_W, RACK_H, RACK_Z);
   const faceGeo = new THREE.PlaneGeometry(RACK_Z*0.97, RACK_H*0.992);
-  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x14161c, roughness: 0.45, metalness: 0.7, side: THREE.DoubleSide });
+  // Montants avant : metal sombre mais LISIBLE (emissive legere), sinon ils apparaissent
+  // comme des pans noirs a bord net sur les facades voisines en angle rasant.
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x232833, roughness: 0.5, metalness: 0.65,
+    emissive: 0x14161f, emissiveIntensity: 0.5, side: THREE.DoubleSide });
 
   // Atlas de façades (8 tuiles, grille 4x2) -> un seul ShaderMaterial remplace les 6 MeshStandardMaterial + textures.
   // Texture construite dans start() (canvas lourd, 100 % gaspillé sous reduced-motion) : uAtlas initialisé à null.
@@ -365,7 +368,7 @@ if (renderer) {
     const N = slots.length;                                  // 136
     casesIM  = new THREE.InstancedMesh(rackGeo, rackMat, N*2);
     facesIM  = new THREE.InstancedMesh(faceGeo, faceMat, N*2);
-    const pillarGeo = new THREE.BoxGeometry(0.07, RACK_H, 0.13);
+    const pillarGeo = new THREE.BoxGeometry(0.07, RACK_H, 0.09);
     pillarsIM = new THREE.InstancedMesh(pillarGeo, pillarMat, N*4);   // 2 montants par baie
     const tiles = new Float32Array(N*2*2);                   // offset UV par instance de face
     // Remplissage monde d'abord (indices [0..N-1]) puis miroir ([N..2N-1]) ; pillarsIM : monde

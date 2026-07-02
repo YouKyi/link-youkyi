@@ -125,9 +125,12 @@ function bakeAO(x){
   g.addColorStop(0,'rgba(0,0,0,0.34)'); g.addColorStop(0.18,'rgba(0,0,0,0.05)');
   g.addColorStop(0.72,'rgba(0,0,0,0.05)'); g.addColorStop(1,'rgba(0,0,0,0.45)');
   x.fillStyle=g; x.fillRect(0,0,512,1024);
+  // Bords lateraux volontairement doux : en angle rasant, la perspective etire
+  // enormement le bord proche de la facade ; une bande sombre large et marquee
+  // devient un pan d'ombre a frontiere nette (artefact visuel).
   g = x.createLinearGradient(0,0,512,0);
-  g.addColorStop(0,'rgba(0,0,0,0.30)'); g.addColorStop(0.12,'rgba(0,0,0,0)');
-  g.addColorStop(0.88,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.30)');
+  g.addColorStop(0,'rgba(0,0,0,0.14)'); g.addColorStop(0.07,'rgba(0,0,0,0)');
+  g.addColorStop(0.93,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.14)');
   x.fillStyle=g; x.fillRect(0,0,512,1024);
 }
 // Corps de dessin d'une façade « serveur » (ex-makeServerTexture), memes conventions.
