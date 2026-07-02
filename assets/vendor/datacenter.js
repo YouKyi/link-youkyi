@@ -133,6 +133,9 @@ if (renderer) {
         float d = (vWZ - uRampZ0) / uRampSpacing;
         float pool = pow(0.5 + 0.5*cos(6.28318*d), 1.6);
         float light = mix(1.0, 0.55 + 0.9*pool, clamp(uRampBright, 0.0, 2.0));
+        // Fondu de proximite : sur les facades tres proches vues en angle rasant, un pool
+        // plein s'etale en pan lave a frontiere visible ; on uniformise sous ~6 m.
+        light = mix(1.0, light, smoothstep(2.0, 6.0, vDist));
         vec3 col = tex * uBright * light;
         float f = 1.0 - exp(-uFogDensity*uFogDensity*vDist*vDist);
         gl_FragColor = vec4(mix(col, uFogColor, clamp(f,0.0,1.0)), 1.0);
