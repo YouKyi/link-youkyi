@@ -368,11 +368,14 @@ function buildRacks(){
       const j = i + mir*N;
       setInst(casesIM, j, s.side*RACK_X, RACK_H/2+0.05, s.z, null, mir);
       _qF.setFromAxisAngle(new THREE.Vector3(0,1,0), -s.side*Math.PI/2);
-      setInst(facesIM, j, s.side*(FACE_X - FACE_RECESS), RACK_H/2+0.05, s.z, _qF, mir);
+      // Face contre le caisson (comme avant) ; montants EN SAILLIE de FACE_RECESS vers
+      // l'allée : vue de biais, la face paraît renfoncée derrière les montants.
+      // (Ne PAS mettre la face à FACE_X + FACE_RECESS : elle serait DANS le caisson opaque.)
+      setInst(facesIM, j, s.side*(FACE_X - 0.02), RACK_H/2+0.05, s.z, _qF, mir);
       tiles[j*2]   = (s.variant%4)/4;
       tiles[j*2+1] = 1 - (Math.floor(s.variant/4)+1)/2;
-      setInst(pillarsIM, j*2,   s.side*(FACE_X-0.02), RACK_H/2+0.05, s.z - RACK_Z*0.44, null, mir);
-      setInst(pillarsIM, j*2+1, s.side*(FACE_X-0.02), RACK_H/2+0.05, s.z + RACK_Z*0.44, null, mir);
+      setInst(pillarsIM, j*2,   s.side*(FACE_X - FACE_RECESS), RACK_H/2+0.05, s.z - RACK_Z*0.44, null, mir);
+      setInst(pillarsIM, j*2+1, s.side*(FACE_X - FACE_RECESS), RACK_H/2+0.05, s.z + RACK_Z*0.44, null, mir);
     }
   });
   facesIM.geometry = faceGeo.clone();
@@ -425,7 +428,7 @@ const faceMat = new THREE.ShaderMaterial({
       float pool = pow(0.5 + 0.5*cos(6.28318*d), 1.6);
       float light = mix(1.0, 0.55 + 0.9*pool, clamp(uRampBright, 0.0, 2.0));
       vec3 col = tex * uBright * light;
-      float f = 1.0 - exp(-uFogDensity*uFogDensity*vDist*vDist*2.0);
+      float f = 1.0 - exp(-uFogDensity*uFogDensity*vDist*vDist);   // même formule que FogExp2
       gl_FragColor = vec4(mix(col, uFogColor, clamp(f,0.0,1.0)), 1.0);
     }`,
   side: THREE.DoubleSide,
@@ -436,7 +439,7 @@ Trois.js définit `USE_INSTANCING` automatiquement quand le matériau est rendu 
 
 - [ ] **Step 4 : Adapter LED et miroir**
 
-`buildLEDs()` : les LED restent des `THREE.Points` par... NON : les regrouper en UN SEUL Points global. Remplacer la boucle `for(const u of units)` par une boucle sur `slots` qui pousse tout dans des tableaux globaux (`pos/col/pha/rate/base`), avec `x = s.side*(FACE_X - FACE_RECESS - 0.012)` et `yy`/`zz` décalés de `s.z`. Semer par `(seed, s.r, s.side)` comme aujourd'hui (les 2 périodes restent identiques). À la fin, créer aussi les copies miroir : pour chaque LED, pousser `(x, -y, z)` avec `base*0.4`. Un seul `THREE.Points(g, ledMat)` ajouté à `scene` (pas à `worldGroup`), `frustumCulled=false`, référence gardée dans `ledPoints` pour le dispose/rebuild.
+`buildLEDs()` : les LED restent des `THREE.Points` par... NON : les regrouper en UN SEUL Points global. Remplacer la boucle `for(const u of units)` par une boucle sur `slots` qui pousse tout dans des tableaux globaux (`pos/col/pha/rate/base`), avec `x = s.side*(FACE_X - 0.032)` (12 mm devant la face, qui est à FACE_X - 0.02) et `yy`/`zz` décalés de `s.z`. Semer par `(seed, s.r, s.side)` comme aujourd'hui (les 2 périodes restent identiques). À la fin, créer aussi les copies miroir : pour chaque LED, pousser `(x, -y, z)` avec `base*0.4`. Un seul `THREE.Points(g, ledMat)` ajouté à `scene` (pas à `worldGroup`), `frustumCulled=false`, référence gardée dans `ledPoints` pour le dispose/rebuild.
 
 `mirrorGroup` et `buildMirror()` disparaissent entièrement (le miroir est maintenant dans les instances et les LED dupliquées). `config.mirror` pilotera à la place la visibilité des instances miroir : le plus simple est `im.count = config.mirror ? N*2 : N` pour les 3 familles (les instances miroir sont en seconde moitié) et la reconstruction des LED. Câbler ça dans `applyLive()` :
 
@@ -1010,7 +1013,7 @@ function buildScreens(){
   scr.forEach((s, i) => {
     const rnd = mulberry32((s.r*97 + 5)>>>0);
     _qF.setFromAxisAngle(new THREE.Vector3(0,1,0), -s.side*Math.PI/2);
-    setInst(screensIM, i, s.side*(FACE_X - FACE_RECESS + 0.015), 1.4 + rnd()*1.8, s.z + (rnd()-0.5)*0.8, _qF, 0);
+    setInst(screensIM, i, s.side*(FACE_X - 0.035), 1.4 + rnd()*1.8, s.z + (rnd()-0.5)*0.8, _qF, 0);
     ph[i] = rnd();
   });
   screensIM.geometry = screenGeo.clone();
