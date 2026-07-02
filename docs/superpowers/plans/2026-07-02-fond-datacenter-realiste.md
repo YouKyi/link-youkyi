@@ -865,7 +865,7 @@ const dustMat = new THREE.ShaderMaterial({
       gl_Position = projectionMatrix * mv;
       gl_PointSize = min(5.0, 0.02*uHeight/max(-mv.z, 0.1));
       float tw = 0.6 + 0.4*sin(uTime*(0.8+aSeed*2.0) + aSeed*90.0);
-      vA = uDust * inShaft * tw * smoothstep(0.0, 3.0, -mv.z) * smoothstep(28.0, 14.0, -mv.z);
+      vA = uDust * inShaft * tw * smoothstep(0.0, 3.0, -mv.z) * (1.0 - smoothstep(14.0, 28.0, -mv.z));
     }`,
   fragmentShader: `
     varying float vA;
