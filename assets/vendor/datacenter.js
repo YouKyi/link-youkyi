@@ -9,13 +9,12 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { Reflector } from 'three/addons/objects/Reflector.js';
 import { mulberry32, makeRackTexture, makeServerTexture } from './dc-textures.js';
 
 const DEFAULTS = {
   camSpeed: 0.40, blink: 1.05, density: 0.75, ledSize: 0.045,
   glow: 1.20, fog: 0.025, veil: 0.32, palette: 'datacenter',
-  bg: '#04060a', theme: 'dark'
+  bg: '#04060a', theme: 'dark', mirror: 1
 };
 let config = Object.assign({}, DEFAULTS, (window.DC_CONFIG || {}));
 
@@ -66,6 +65,16 @@ if (renderer) {
   const worldGroup = new THREE.Group(); scene.add(worldGroup);
   let units = [];
 
+  // Monde miroir : clone à l'envers (scale.y = -1) de tout ce qui doit se refléter sous le sol
+  // (y=0), au lieu d'un second rendu de scène (Reflector) -> même passe, deux fois moins cher.
+  const mirrorGroup = new THREE.Group();
+  mirrorGroup.scale.y = -1;
+  scene.add(mirrorGroup);
+  function buildMirror(){
+    mirrorGroup.clear();
+    for(const u of units){ mirrorGroup.add(u.clone()); }
+  }
+
   const PALETTES = {
     green: [[128,0.95,0.58,9],[118,0.92,0.54,4],[140,0.85,0.56,2],[150,0.8,0.6,1.5],[212,0.95,0.62,2.2],[225,0.9,0.64,1.2]],
     datacenter: [[212,0.95,0.6,6],[224,0.9,0.62,4],[200,0.9,0.58,2],[45,0.95,0.6,1.2],[0,0,0.95,0.8]],
@@ -88,6 +97,11 @@ if (renderer) {
   const handleGeo = new THREE.BoxGeometry(0.05, RACK_H*0.32, 0.10);
   const handleMat = new THREE.MeshStandardMaterial({ color: 0x04050a, roughness: 0.35, metalness: 0.6 });
   const faceGeo = new THREE.PlaneGeometry(RACK_Z*0.97, RACK_H*0.992);
+  // mirrorGroup a un scale.y = -1 : ça inverse le culling des faces -> double face requis.
+  rackMat.side = THREE.DoubleSide;
+  for(const m of meshMats) m.side = THREE.DoubleSide;
+  for(const m of serverMats) m.side = THREE.DoubleSide;
+  handleMat.side = THREE.DoubleSide;
 
   const ledMat = new THREE.ShaderMaterial({
     uniforms: { uTime:{value:0}, uSize:{value:config.ledSize}, uHeight:{value:600}, uBlink:{value:config.blink}, uMaxSize:{value:16}, uFog:{value:config.fog}, uFogColor:{value:new THREE.Color(config.bg)} },
@@ -117,16 +131,13 @@ if (renderer) {
   });
 
   function buildStatics(){
-    const dprF = pixRatio();
     for(let side=-1; side<=1; side+=2){
       const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.18,PERIODS*TUNNEL+24), new THREE.MeshStandardMaterial({ color:0x0a0b10, roughness:0.8, metalness:0.6 }));
       rail.position.set(side*1.5, RACK_H+0.45, Z0-PERIODS*TUNNEL/2); worldGroup.add(rail);
     }
     const ceil = new THREE.Mesh(new THREE.PlaneGeometry(14, PERIODS*TUNNEL+24), new THREE.MeshStandardMaterial({ color:0x070809, roughness:0.95, metalness:0.2 }));
     ceil.rotation.x = Math.PI/2; ceil.position.set(0, RACK_H+1.15, Z0-PERIODS*TUNNEL/2); worldGroup.add(ceil);
-    const mirror = new Reflector(new THREE.PlaneGeometry(14, PERIODS*TUNNEL+24), { color:0x8b939d, textureWidth:1024*dprF, textureHeight:1024*dprF, clipBias:0.003 });
-    mirror.rotation.x = -Math.PI/2; mirror.position.set(0,0,Z0-PERIODS*TUNNEL/2); worldGroup.add(mirror);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, PERIODS*TUNNEL+24), new THREE.MeshStandardMaterial({ color:0x04060a, roughness:0.2, metalness:0.55, transparent:true, opacity:0.34 }));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, PERIODS*TUNNEL+24), new THREE.MeshStandardMaterial({ color:0x04060a, roughness:0.2, metalness:0.55, transparent:true, opacity:0.62 }));
     floor.rotation.x = -Math.PI/2; floor.position.set(0,0.002,Z0-PERIODS*TUNNEL/2); worldGroup.add(floor);
   }
 
@@ -195,6 +206,7 @@ if (renderer) {
       g.setAttribute('aBase', new THREE.Float32BufferAttribute(base,1));
       const pts = new THREE.Points(g, ledMat); pts.frustumCulled=false; u.add(pts); u.userData.led=pts;
     }
+    buildMirror();
   }
 
   function veilCss(){ return `radial-gradient(70% 64% at 50% 48%, ${hexToRgba(config.bg, config.veil*0.92)} 0%, ${hexToRgba(config.bg, config.veil*0.42)} 44%, ${hexToRgba(config.bg, 0)} 74%)`; }
@@ -204,6 +216,7 @@ if (renderer) {
     scene.fog.density = config.fog; scene.fog.color.set(config.bg);
     ledMat.uniforms.uFog.value = config.fog; ledMat.uniforms.uSize.value = config.ledSize;
     ledMat.uniforms.uBlink.value = config.blink; ledMat.uniforms.uFogColor.value.set(config.bg);
+    mirrorGroup.visible = config.mirror !== 0;
     if(veilEl) veilEl.style.background = veilCss();
     document.body.style.background = config.bg;
   }
