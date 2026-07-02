@@ -28,7 +28,7 @@ l'adaptation au ratio d'écran).
 - Voile (`veil` 0.32) et vignette inchangés : la lisibilité des cartes prime.
 - Identité violette YouKyi : palettes `violet` (link) et `violetPremium` (pro)
   conservées.
-- Boucle infinie sans saut conservée (recyclage individuel vers le fond).
+- Boucle infinie sans saut conservée (mécanisme libre, voir Section 1).
 - Le tuner (`tuner.html` + `npm run tune`) reste l'outil de réglage.
 
 ## Section 1 : architecture et optimisations (financent le réalisme)
@@ -54,8 +54,13 @@ son coût devient marginal.
   texture canvas contenant 8 façades différentes, sélection par offset UV par
   instance (`InstancedBufferAttribute` + patch de shader via
   `onBeforeCompile`). Un seul matériau au lieu de 6.
-- Recyclage : au wrap, seule la matrice de l'instance concernée est réécrite
-  (`instanceMatrix.needsUpdate`), coût CPU négligeable.
+- Boucle infinie par **wrap caméra** : le monde est entièrement statique
+  (matrices d'instances écrites une seule fois) ; c'est la caméra qui avance
+  et se téléporte de `TUNNEL` (longueur de l'allée) quand elle l'a parcourue.
+  La scène est exactement périodique sur `TUNNEL`, le saut est invisible.
+  Remplace le recyclage individuel actuel : zéro CPU par frame. Le sol, le
+  plafond et la poussière suivent la caméra ; l'offset UV de leurs textures
+  compense pour rester fixe en espace monde.
 
 ### Découpage du moteur
 
@@ -81,17 +86,16 @@ Aucune lumière dynamique, aucune passe de rendu supplémentaire.
   sans couture), instanciées et recyclées comme les baies. Le bloom existant
   crée le halo.
 - **Pools de lumière au sol** : cuits dans la texture du sol avec les dalles
-  de plancher technique (grille 60x60, joints, perforations). Le sol reste un
-  plan fixe : sa texture défile par offset UV au rythme exact de `camSpeed`,
-  période alignée sur l'espacement des rampes.
+  de plancher technique (grille 60x60, joints, perforations). Le plan du sol
+  suit la caméra ; son offset UV compense (offset = Z caméra / période
+  monde de la tuile) pour que les dalles et les pools restent fixes en
+  espace monde, alignés sur les rampes.
 - **Modulation d'éclairage des baies** : dans le shader des faces (patch
   `onBeforeCompile`), la luminosité monte sous une rampe et redescend entre
-  deux (sinusoïde de période = espacement des rampes). Point d'implémentation
-  critique : la phase se calcule dans le référentiel de l'allée qui défile
-  (position Z monde + offset de défilement cumulé, uniform `uScroll` partagé,
-  le même qui anime l'offset UV du sol), pas en Z monde brut, sinon les pools
-  de lumière glisseraient sur les baies au lieu de rester accrochés aux
-  rampes. C'est le détail qui « vend » l'éclairage.
+  deux (sinusoïde de période = espacement des rampes). Avec le wrap caméra,
+  le monde est statique : la phase se calcule directement en position Z
+  monde, naturellement alignée sur les rampes elles aussi statiques. C'est
+  le détail qui « vend » l'éclairage.
 - **Fond de tunnel** : plan émissif discret dans le brouillard (lueur de fin
   d'allée).
 
