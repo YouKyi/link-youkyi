@@ -404,9 +404,6 @@ const faceMat = new THREE.ShaderMaterial({
     uRampBright: { value: 0 },            // 0 = modulation neutre pour l'instant
   },
   vertexShader: `
-    #ifdef USE_INSTANCING
-      attribute mat4 instanceMatrix;
-    #endif
     attribute vec2 aTile;
     varying vec2 vUv; varying vec2 vTile; varying float vWZ; varying float vDist;
     void main(){
@@ -435,7 +432,7 @@ const faceMat = new THREE.ShaderMaterial({
 });
 ```
 
-Trois.js définit `USE_INSTANCING` automatiquement quand le matériau est rendu par un `InstancedMesh` ; la déclaration doit être manuelle dans un ShaderMaterial (bloc `#ifdef` ci-dessus). Dans `applyLive()`, mettre à jour `faceMat.uniforms.uFogColor/uFogDensity`. Import à compléter : `import { mulberry32, makeFacadeAtlas } from './dc-textures.js';`
+Three.js r160 (le vendored) définit `USE_INSTANCING` ET déclare `attribute mat4 instanceMatrix;` automatiquement pour un ShaderMaterial rendu par un InstancedMesh (vérifié dans three.module.js) : ne PAS redéclarer l'attribut, ce serait une redéfinition GLSL (les faces ne compileraient plus). Utiliser `instanceMatrix` directement dans main(). Dans `applyLive()`, mettre à jour `faceMat.uniforms.uFogColor/uFogDensity`. Import à compléter : `import { mulberry32, makeFacadeAtlas } from './dc-textures.js';`
 
 - [ ] **Step 4 : Adapter LED et miroir**
 
@@ -982,10 +979,8 @@ const screenMat = new THREE.ShaderMaterial({
   uniforms: { uMap:{value:makeLogTexture()}, uTime:{value:0}, uSpeed:{value:config.screens} },
   side: THREE.DoubleSide,
   vertexShader: `
-    #ifdef USE_INSTANCING
-      attribute mat4 instanceMatrix;
-    #endif
     attribute float aPhase;
+    // instanceMatrix est déclaré automatiquement par three r160 (ShaderMaterial + InstancedMesh)
     varying vec2 vUv; varying float vPh;
     void main(){
       vUv = uv; vPh = aPhase;
