@@ -505,6 +505,7 @@ if (renderer) {
     composer.render();
     stats.ms += (performance.now() - tA) * 0.05 - stats.ms * 0.05;   // EMA
     stats.calls = renderer.info.render.calls;
+    if (!canvas.classList.contains('ready')) canvas.classList.add('ready');   // 1re frame prête -> fondu poster -> 3D
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(animate); } });
   function resize(){
@@ -517,14 +518,41 @@ if (renderer) {
   }
   window.addEventListener('resize', resize);
 
-  buildStatics(); buildAtmosphere(); buildRacks(); buildLEDs(); buildScreens();
-  resize(); applyLive();
-  if (window.DC_PANEL) import('./dc-panel.js').then(m => m.buildPanel({
-    config, DEFAULTS, applyLive, buildLEDs,
-    regen(){ seed = Math.floor(Math.random()*1e9); buildLEDs(); },
-    getStats(){ return stats; }
-  }));
-  raf = requestAnimationFrame(animate);
+  // Capture d'un poster statique de la scène (au tuner) : sert à générer
+  // assets/poster-<variante>.webp, affiché tant que le moteur 3D n'a pas démarré.
+  function capturePoster(){
+    composer.render();   // frame fraîche dans le buffer (preserveDrawingBuffer est false)
+    renderer.domElement.toBlob((blob) => {
+      if (!blob) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `poster-${config.palette === 'violetPremium' ? 'pro' : 'link'}.webp`;
+      a.click(); URL.revokeObjectURL(a.href);
+    }, 'image/webp', 0.92);
+  }
 
-  window.DC = { DEFAULTS, config, PALETTES, applyLive, buildLEDs, regen(){ seed=Math.floor(Math.random()*1e9); buildLEDs(); }, stats };
+  // Démarrage différé : la construction (instancing) et la boucle rAF sont coûteuses,
+  // on les reporte après le chargement de la page (idle) pour ne pas concurrencer le
+  // premier rendu du contenu. Le poster CSS reste visible entre-temps.
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function start(){
+    buildStatics(); buildAtmosphere(); buildRacks(); buildLEDs(); buildScreens();
+    resize(); applyLive();
+    if (window.DC_PANEL) import('./dc-panel.js').then(m => m.buildPanel({
+      config, DEFAULTS, applyLive, buildLEDs, capturePoster,
+      regen(){ seed = Math.floor(Math.random()*1e9); buildLEDs(); },
+      getStats(){ return stats; }
+    }));
+    raf = requestAnimationFrame(animate);
+  }
+  if (window.DC_PANEL) {
+    start();                                   // le tuner démarre toujours, tout de suite
+  } else if (!reduced) {
+    const idle = () => ('requestIdleCallback' in window)
+      ? requestIdleCallback(start, { timeout: 1500 }) : setTimeout(start, 200);
+    (document.readyState === 'complete') ? idle()
+      : window.addEventListener('load', idle, { once: true });
+  } // sinon : reduced-motion -> le poster reste, le moteur 3D ne démarre jamais
+
+  window.DC = { DEFAULTS, config, PALETTES, applyLive, buildLEDs, capturePoster, regen(){ seed=Math.floor(Math.random()*1e9); buildLEDs(); }, stats };
 }

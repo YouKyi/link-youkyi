@@ -1,6 +1,6 @@
 /* Panneau de réglage (tuner) du fond datacenter. Chargé seulement si window.DC_PANEL. */
 export function buildPanel(ctx){
-  const { config, DEFAULTS, applyLive, buildLEDs, regen, getStats } = ctx;
+  const { config, DEFAULTS, applyLive, buildLEDs, regen, getStats, capturePoster } = ctx;
   const controls = document.getElementById('controls'); if(!controls) return;
   const REGEN = ['density','palette'];
   const SLIDERS = [
@@ -37,10 +37,11 @@ export function buildPanel(ctx){
   const bgRow=document.createElement('div'); bgRow.className='row'; bgRow.innerHTML=`<div class="lab"><span>Couleur de fond</span></div><input type="color" id="in-bg">`;
   controls.appendChild(bgRow);
   const bgInput=bgRow.querySelector('input'); bgInput.value=config.bg; bgInput.addEventListener('input', ()=>{ config.bg=bgInput.value; applyLive(); });
-  const actRow=document.createElement('div'); actRow.className='btn-row'; actRow.innerHTML=`<button class="act" id="btn-regen">↻ Régénérer</button><button class="act primary" id="btn-copy">⧉ Copier la config</button>`;
+  const actRow=document.createElement('div'); actRow.className='btn-row'; actRow.innerHTML=`<button class="act" id="btn-regen">↻ Régénérer</button><button class="act primary" id="btn-copy">⧉ Copier la config</button><button class="act" id="btn-poster">📷 Poster</button>`;
   controls.appendChild(actRow);
   document.getElementById('btn-regen').addEventListener('click', ()=>{ regen(); });
   document.getElementById('btn-copy').addEventListener('click', ()=>{ const clean={}; Object.keys(DEFAULTS).forEach(k=>clean[k]=config[k]); const json=JSON.stringify(clean,null,2); if(navigator.clipboard) navigator.clipboard.writeText(json).then(showToast,()=>fb(json)); else fb(json); });
+  document.getElementById('btn-poster').addEventListener('click', ()=>{ capturePoster(); });
   function fb(text){ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); showToast(); }catch(e){} ta.remove(); }
   const toast=document.getElementById('toast'); let tt; function showToast(){ if(!toast)return; toast.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),1600); }
   const panel=document.getElementById('panel'), togBtn=document.getElementById('toggle-panel');

@@ -64,7 +64,7 @@ function renderLink(link) {
             </a>`;
 }
 
-function buildMap(cfg) {
+function buildMap(cfg, name) {
   const ogImageAbs = cfg.ogImage ? cfg.ogUrl.replace(/\/$/, '') + cfg.ogImage : '';
   return {
     LANG: cfg.lang || 'fr',
@@ -83,13 +83,14 @@ function buildMap(cfg) {
     NAV_LABEL: escapeHtml(`Liens ${cfg.name}`),
     DC_CONFIG: JSON.stringify(cfg.dc || FROZEN_DC),
     DA_CLASS: cfg.accent === 'premium' ? 'da-premium' : '',
+    POSTER_CLASS: existsSync(join(root, 'assets', `poster-${cfg.variant || name}.webp`)) ? 'has-img' : '',
     LINKS: cfg.links.map(renderLink).join('\n'),
   };
 }
 
 const fill = (tpl, map) => tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => (k in map ? map[k] : ''));
 
-function copyAssets(cfg, assetsDir) {
+function copyAssets(cfg, assetsDir, name) {
   mkdirSync(assetsDir, { recursive: true });
   // Avatar local
   if (cfg.avatar && cfg.avatar.startsWith('/assets/')) {
@@ -97,6 +98,9 @@ function copyAssets(cfg, assetsDir) {
     const src = join(root, 'assets', file);
     if (existsSync(src)) copyFileSync(src, join(assetsDir, file));
   }
+  // Poster statique (généré manuellement via le tuner ; absent = pas de copie, {{POSTER_CLASS}} vide)
+  const poster = join(root, 'assets', `poster-${cfg.variant || name}.webp`);
+  if (existsSync(poster)) copyFileSync(poster, join(assetsDir, 'poster.webp'));
   // CSS compilé (présent seulement après le build Tailwind)
   const css = join(root, 'assets', 'tailwind.css');
   if (existsSync(css)) copyFileSync(css, join(assetsDir, 'tailwind.css'));
@@ -115,15 +119,15 @@ for (const name of VARIANTS) {
   const assetsDir = join(outDir, 'assets');
 
   if (copyCssOnly) {
-    copyAssets(cfg, assetsDir);
+    copyAssets(cfg, assetsDir, name);
     continue;
   }
 
-  const map = buildMap(cfg);
+  const map = buildMap(cfg, name);
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, 'index.html'), fill(layoutTpl, map));
   writeFileSync(join(outDir, '404.html'), fill(errorTpl, map));
-  copyAssets(cfg, assetsDir);
+  copyAssets(cfg, assetsDir, name);
 }
 
 console.log(copyCssOnly ? 'Assets copiés dans apps/*.' : `Apps générées : ${VARIANTS.join(', ')}.`);
