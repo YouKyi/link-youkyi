@@ -18,6 +18,7 @@
     { "network": "linkedin", "url": "https://www.linkedin.com/in/alexandreagasseau/" },
     { "network": "instagram", "url": "https://www.instagram.com/youkyi/" },
     { "network": "threads", "url": "https://www.threads.net/@youkyi" },
+    { "network": "mastodon", "url": "https://mastodon.social/@youkyi", "me": true },
     { "network": "twitter", "url": "https://x.com/RC_YouKyi" },
     { "network": "youtube", "url": "https://www.youtube.com/@YouKyi" },
     { "network": "facebook", "url": "https://www.facebook.com/YouKyii" },
