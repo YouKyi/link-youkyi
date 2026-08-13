@@ -6,8 +6,8 @@ Deux variantes, une source unique, **thème sombre uniquement** :
 
 | Variante | Profil | Liens | Domaines visés |
 |---|---|---|---|
-| `link` | « Youkyi » (logo), 8 liens | LinkedIn, Instagram, Threads, X, YouTube, Facebook, GitHub, Mail | `youkyi.fr`, `link.youkyi.fr` |
-| `pro` | « Alexandre Agasseau » (photo), 4 liens | LinkedIn, X, GitHub, Mail | `pro.youkyi.fr` |
+| `link` | « Youkyi » (logo), 9 liens | LinkedIn, Instagram, Threads, Mastodon, X, YouTube, Facebook, GitHub, Mail | `youkyi.fr`, `link.youkyi.fr` |
+| `pro` | « Alexandre Agasseau » (photo), 5 liens | LinkedIn, X, Mastodon, GitHub, Mail | `pro.youkyi.fr` |
 
 ## Architecture
 
@@ -38,6 +38,20 @@ vercel.json             cleanUrls + en-têtes de sécurité (CSP, HSTS…) parta
 - **Nouveau réseau** : ajouter son entrée (libellé + SVG) dans `data/networks.mjs`, le référencer dans une config. Pour une icône colorée : `.is-<reseau> svg { color: #...; }` dans `src/input.css`.
 - **Texte commun, styles, footer** : `src/templates/layout.html` et `src/input.css` (modifiés une seule fois pour les deux variantes).
 - **Réglage du fond 3D** : `FROZEN_DC` dans `build/generate.mjs`.
+
+### Vérification de domaine (Mastodon, IndieAuth)
+
+Un lien portant `"me": true` dans sa config est généré avec `rel="me"` :
+
+```json
+{ "network": "mastodon", "url": "https://mastodon.social/@youkyi", "me": true }
+```
+
+```html
+<a href="https://mastodon.social/@youkyi" target="_blank" rel="me noopener" class="link-card group">
+```
+
+Le HTML étant statique, le lien est lisible sans exécuter de JavaScript, ce qu'exige Mastodon. Côté Mastodon, la vérification ne se déclenche qu'après avoir ajouté le domaine (`https://youkyi.fr`, `https://pro.youkyi.fr`) dans un champ métadonnées du profil, puis ré-enregistré le profil.
 
 ## Build & développement local
 
