@@ -32,14 +32,19 @@ const escapeHtml = (s) =>
     .replace(/"/g, '&quot;');
 
 const isExternal = (url) => /^https?:/i.test(url);
-const externalAttrs = (url) => (isExternal(url) ? ' target="_blank" rel="noopener"' : '');
+// `me: true` dans la config ajoute rel="me" (vérification de domaine Mastodon / IndieAuth).
+const linkAttrs = (link) => {
+  const rel = [link.me ? 'me' : '', isExternal(link.url) ? 'noopener' : ''].filter(Boolean).join(' ');
+  const target = isExternal(link.url) ? ' target="_blank"' : '';
+  return `${target}${rel ? ` rel="${rel}"` : ''}`;
+};
 
 function renderLink(link) {
   const net = networks[link.network];
   if (!net) throw new Error(`Réseau inconnu dans la config : "${link.network}"`);
   const label = link.label || net.label;
   const url = link.url;
-  const attrs = externalAttrs(url);
+  const attrs = linkAttrs(link);
   const iconClass = `link-icon is-${link.network}`;
 
   if (link.featured) {
