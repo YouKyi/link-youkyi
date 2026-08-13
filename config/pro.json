@@ -19,6 +19,7 @@
     { "network": "mail", "featured": true, "label": "Parlons de votre infrastructure", "url": "mailto:contact@youkyi.fr", "subtitle": "contact@youkyi.fr" },
     { "network": "linkedin", "url": "https://www.linkedin.com/in/alexandreagasseau/" },
     { "network": "twitter", "url": "https://x.com/RC_YouKyi" },
+    { "network": "mastodon", "url": "https://mastodon.social/@youkyi", "me": true },
     { "network": "github", "url": "https://www.github.com/YouKyi" }
   ]
 }

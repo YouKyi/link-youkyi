@@ -74,6 +74,7 @@ html.da-premium .link-card-featured:hover {
   .is-instagram svg { color: #E4405F; }
   .is-youtube svg   { color: #FF0000; }
   .is-facebook svg  { color: #1877F2; }
+  .is-mastodon svg  { color: #6364FF; }
 
   /* avatar du profil */
   .avatar { @apply w-28 h-28 mb-3; }
