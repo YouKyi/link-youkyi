@@ -1,0 +1,108 @@
+/* youkyi · DA oblique · STYLES DE BASE
+   Reset léger + type de base + trame de fond. Linké via styles.css. */
+
+/* version du design system · lisible par un consommateur :
+   getComputedStyle(document.documentElement).getPropertyValue('--yk-version')
+   Ce qui la fait bouger est écrit dans CHANGELOG.md. */
+:root { --yk-version: "2.0.2"; /* @kind other */ }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+
+body {
+  background: var(--surface-page);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Trame de fond optionnelle : ajouter la classe .yk-grid sur <body> ou un conteneur */
+.yk-grid {
+  background-image:
+    linear-gradient(var(--yk-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--yk-grid) 1px, transparent 1px);
+  background-size: var(--grid-unit) var(--grid-unit);
+}
+
+/* ---- type de base ---- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-head);
+  font-weight: var(--fw-semi);
+  line-height: var(--lh-head);
+  margin: 0 0 .4em;
+  color: var(--text);
+  text-wrap: pretty;
+}
+h1 { font-size: var(--fs-h1); letter-spacing: var(--ls-h1); line-height: var(--lh-tight); }
+h2 { font-size: var(--fs-h2); letter-spacing: var(--ls-h2); }
+h3 { font-size: var(--fs-h3); letter-spacing: var(--ls-h3); }
+h4 { font-size: var(--fs-h4); letter-spacing: var(--ls-h4); }
+h5 { font-size: var(--fs-h5); letter-spacing: var(--ls-h4); }
+h6 { font-size: var(--fs-h6); letter-spacing: var(--ls-h4); }
+
+p { margin: 0 0 1em; }
+a { color: var(--edge-txt); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+code, kbd, samp { font-family: var(--font-mono); font-size: .92em; }
+
+/* Placeholder : piloté par les tokens, jamais laissé au navigateur.
+   Une règle globale car ::placeholder ne s'exprime pas en style inline. */
+input::placeholder, textarea::placeholder { color: var(--yk-ink-3); opacity: 1; }
+
+/* ---- v2 · tout élément pressable répond à l'appui ----
+   Le retour est instantané et se joue à la pression, pas au relâchement.
+   Le survol est conditionné à un pointeur fin : sur écran tactile, un tap
+   déclencherait un faux survol. */
+.yk-pressable { transition: transform var(--dur-press) var(--ease-out); }
+.yk-pressable:active { transform: scale(var(--press-scale)); }
+:where(a, button, [role="button"], input, select, textarea):focus-visible {
+  outline: 2px solid var(--edge); outline-offset: 2px;
+}
+
+/* ---- kicker mono en capitales : signature youkyi ---- */
+.yk-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-sm);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ---- wordmark : « youkyi_ » · underscore = seul orange autorisé ici ---- */
+.yk-wordmark {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-display);
+  color: var(--text);
+}
+.yk-wordmark u { text-decoration: none; color: var(--edge); }
+
+/* ---- helper de coupe raide (contrôles) : coin bas-droit tranché à la pente ---- */
+.yk-cut {
+  clip-path: polygon(
+    0 0, 100% 0,
+    100% calc(100% - var(--cut-dy)),
+    calc(100% - var(--cut-dx)) 100%,
+    0 100%
+  );
+}
+/* ---- helper de coupe douce (plans) : arête haut-droite ---- */
+.yk-bevel {
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--bevel-dx)) 0,
+    100% var(--bevel-dy),
+    100% 100%, 0 100%
+  );
+}
+
+::selection { background: var(--edge); color: var(--on-edge); }
+
+/* Accessibilité · mouvement réduit : tout devient instantané.
+   L'état reste lisible sans animation (l'arête + le libellé suffisent). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

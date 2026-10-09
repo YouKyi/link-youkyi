@@ -1,0 +1,538 @@
+/* youkyi · DA v2 · COUCHE D'INTERFACE (classes)
+   =============================================
+   La matière publique du design system. Les composants React ne sont qu'un
+   habillage mince de CE fichier : ce qui est documenté ici est copiable dans
+   n'importe quel stack (HTML pur, Jinja, print, email), sans React.
+
+   CONVENTION
+   · bloc          `.yk-btn`
+   · modificateur  `.yk-btn--primary`, `.yk-btn--sm`   (variante statique)
+   · élément       `.yk-btn__icon`
+   · état runtime  `:hover` / `:active` / `:focus-visible` / `:disabled`
+
+   CONVENTION D'INTERACTION · le survol appartient à ce qui est CLIQUABLE.
+   Toute règle `:hover` de ce fichier est scopée soit à un élément réellement
+   interactif (a, button, input, select, textarea, summary, label, [role=button],
+   [role=link], [role=menuitem], [tabindex]), soit à un modificateur explicite
+   (`--interactive`). Conséquence voulue : un spécimen de documentation écrit en
+   `<span class="yk-btn">` ne réagit PAS au pointeur, et une surface qui n'est
+   pas cliquable ne promet jamais un clic qui n'existe pas. Un `<div>` rendu
+   cliquable en JS doit porter `role` et `tabindex` · il retrouve alors le
+   survol, et l'accessibilité avec.
+                   doublés par `[data-state="hover|active|focus"]` pour figer un
+                   état dans un spécimen de documentation, sans interaction.
+   Aucun hex en dur : tout passe par les tokens (`tokens/*.css`). Aucune
+   variable CSS déclarée ici non plus : les modificateurs redéclarent leurs
+   valeurs, pour que le registre de tokens du design system reste propre.
+   Le survol est conditionné à un pointeur fin · sur tactile un tap
+   déclencherait un faux survol.
+
+   Les marqueurs `@block` / `@endblock` sont lus par la bibliothèque
+   (`library/`) pour afficher le CSS réel de chaque composant. Ne pas les
+   retirer. */
+
+/* @block btn */
+/* Bouton · le rayon suit la hauteur (~0,30 × h). L'état se lit sur la SURFACE.
+   Le primaire est le seul aplat orange : un seul par écran. */
+.yk-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 20px;border:none;border-radius:var(--r-control);background:transparent;color:var(--yk-ink);font:var(--fw-med) 14px/1 var(--font-body);letter-spacing:-.005em;white-space:nowrap;text-decoration:none;cursor:pointer;transition:transform var(--dur-press) var(--ease-out),background var(--dur-state) var(--ease-out),color var(--dur-state) var(--ease-out),border-color var(--dur-state) var(--ease-out)}
+.yk-btn--sm{height:32px;padding:0 14px;gap:7px;font-size:13px;border-radius:var(--r-control-sm)}
+.yk-btn--lg{height:48px;padding:0 26px;gap:9px;font-size:15.5px}
+.yk-btn--block{display:flex;width:100%}
+.yk-btn--icon{width:40px;padding:0}
+.yk-btn--icon.yk-btn--sm{width:32px}
+.yk-btn--icon.yk-btn--lg{width:48px}
+.yk-btn__icon{display:inline-flex;flex:none}
+.yk-btn__icon svg{display:block;width:1.15em;height:1.15em}
+/* variantes */
+.yk-btn--primary{background:var(--yk-accent);color:var(--yk-on-accent);font-weight:var(--fw-semi)}
+.yk-btn--secondary{background:var(--yk-surf-2);color:var(--yk-ink);border:1px solid var(--yk-line)}
+.yk-btn--ghost{background:transparent;color:var(--yk-ink-2)}
+/* survol · pointeur fin uniquement */
+@media (hover:hover) and (pointer:fine){
+.yk-btn--primary:where(a,button,input,select,textarea,summary,label,[role=button],[role=link],[role=menuitem],[tabindex]):hover{background:color-mix(in srgb,var(--yk-accent) 88%,var(--yk-ink))}
+.yk-btn--secondary:where(a,button,input,select,textarea,summary,label,[role=button],[role=link],[role=menuitem],[tabindex]):hover{background:var(--yk-surf-3)}
+.yk-btn--ghost:where(a,button,input,select,textarea,summary,label,[role=button],[role=link],[role=menuitem],[tabindex]):hover{background:var(--yk-surf-2);color:var(--yk-ink)}
+}
+/* survol figé pour spécimen */
+.yk-btn--primary[data-state=hover]{background:color-mix(in srgb,var(--yk-accent) 88%,var(--yk-ink))}
+.yk-btn--secondary[data-state=hover]{background:var(--yk-surf-3)}
+.yk-btn--ghost[data-state=hover]{background:var(--yk-surf-2);color:var(--yk-ink)}
+/* appui · descend à 97 %, joué à la pression */
+.yk-btn--primary:active,.yk-btn--primary[data-state=active]{background:color-mix(in srgb,var(--yk-accent) 78%,var(--yk-ink))}
+.yk-btn--secondary:active,.yk-btn--secondary[data-state=active]{background:var(--yk-surf-3)}
+.yk-btn--ghost:active,.yk-btn--ghost[data-state=active]{background:var(--yk-surf-2);color:var(--yk-ink)}
+.yk-btn:active:not(:disabled),.yk-btn[data-state=active]{transform:scale(var(--press-scale))}
+/* focus · anneau orange opaque 2px, décalé de 2px (jamais un halo) */
+.yk-btn:focus-visible,.yk-btn[data-state=focus]{outline:2px solid var(--yk-accent);outline-offset:2px}
+.yk-btn:disabled,.yk-btn[aria-disabled=true]{opacity:.42;cursor:not-allowed;transform:none}
+/* @endblock */
+
+/* @block field */
+/* Champ · UN CANAL, UN SENS : le filet orange appartient au FOCUS seul.
+   L'erreur passe par le fond teinté, le libellé, le message et le marqueur ·
+   au focus le fond teinté se retire. */
+.yk-field{display:flex;flex-direction:column;gap:7px}
+.yk-field__label{font:var(--fw-med) var(--fs-body-sm)/1.3 var(--font-body);color:var(--yk-ink-2)}
+.yk-field__box{display:flex;align-items:center;gap:10px;height:44px;padding:0 15px;border:1px solid var(--yk-line);border-radius:var(--r-field);background:var(--yk-surf-2);transition:border-color var(--dur-state) var(--ease-out),background var(--dur-state) var(--ease-out)}
+.yk-field--sm .yk-field__box{height:38px}
+.yk-field__input{flex:1;min-width:0;height:100%;border:none;background:transparent;outline:none;font:var(--fw-reg) 14.5px/1 var(--font-body);color:var(--yk-ink)}
+.yk-field__affix{display:inline-flex;flex:none;color:var(--yk-ink-3)}
+.yk-field__affix svg{display:block;width:17px;height:17px}
+.yk-field__msg{font:var(--fw-reg) var(--fs-body-xs)/1.45 var(--font-body);color:var(--yk-ink-3)}
+/* focus */
+.yk-field__box:focus-within,.yk-field[data-state=focus] .yk-field__box{border:2px solid var(--yk-accent)}
+/* erreur */
+.yk-field--error .yk-field__box{border-color:var(--yk-line-strong);background:color-mix(in srgb,var(--yk-accent) 8%,var(--yk-surf-2))}
+.yk-field--error .yk-field__label,.yk-field--error .yk-field__msg{color:var(--yk-accent-txt)}
+.yk-field--error .yk-field__box:focus-within,.yk-field--error[data-state=focus] .yk-field__box{border:2px solid var(--yk-accent);background:var(--yk-surf-2)}
+.yk-field__flag{display:grid;place-items:center;flex:none;width:18px;height:18px;border-radius:var(--r-pill);background:var(--yk-accent);color:var(--yk-on-accent);font:var(--fw-bold) 12px/1 var(--font-body)}
+.yk-field--disabled{opacity:.5}
+.yk-field--disabled .yk-field__box{pointer-events:none}
+/* @endblock */
+
+/* @block card */
+/* Carte · l'élévation se déclare UNE fois : un filet 1px OU une ombre.
+   En sombre c'est la valeur qui sépare les plans, pas l'ombre. */
+.yk-card{position:relative;border:1px solid var(--yk-line);border-radius:var(--r-card);background:var(--yk-surf-1);color:var(--yk-ink);transition:background var(--dur-state) var(--ease-out),box-shadow var(--dur-state) var(--ease-out)}
+.yk-card--slat{background:var(--yk-surf-2)}
+.yk-card--ink{background:var(--yk-ink-solid);color:var(--yk-on-ink);border-color:var(--yk-line-strong)}
+.yk-card--elevated{border:none;box-shadow:var(--yk-shadow-1)}
+.yk-card--interactive{cursor:pointer}
+.yk-card__body{padding:22px 24px 24px}
+.yk-card__kicker{font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-ink-3);margin-bottom:10px}
+.yk-card--ink .yk-card__kicker{color:var(--yk-on-ink-muted)}
+.yk-card__title{margin:0 0 8px;font:var(--fw-semi) var(--fs-h4)/var(--lh-head) var(--font-head);letter-spacing:var(--ls-h4);color:inherit;transition:color var(--dur-state) var(--ease-out)}
+.yk-card__title:last-child{margin-bottom:0}
+.yk-card__text{font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--yk-ink-2)}
+.yk-card--ink .yk-card__text{color:var(--yk-on-ink-soft)}
+.yk-card__footer{margin-top:18px;padding-top:16px;border-top:1px solid var(--yk-line)}
+.yk-card--ink .yk-card__footer{border-top-color:var(--yk-on-ink-faint)}
+/* survol · seulement si la carte est interactive */
+@media (hover:hover) and (pointer:fine){
+.yk-card--interactive:hover{background:var(--yk-surf-2)}
+.yk-card--slat.yk-card--interactive:hover{background:var(--yk-surf-3)}
+.yk-card--ink.yk-card--interactive:hover{background:var(--yk-ink-solid)}
+.yk-card--interactive:hover .yk-card__title{color:var(--yk-accent-txt)}
+.yk-card--ink.yk-card--interactive:hover .yk-card__title{color:var(--yk-on-ink-accent)}
+}
+.yk-card--interactive[data-state=hover]{background:var(--yk-surf-2)}
+.yk-card--slat.yk-card--interactive[data-state=hover]{background:var(--yk-surf-3)}
+.yk-card--interactive[data-state=hover] .yk-card__title{color:var(--yk-accent-txt)}
+.yk-card--ink.yk-card--interactive[data-state=hover] .yk-card__title{color:var(--yk-on-ink-accent)}
+/* @endblock */
+
+/* @block check */
+/* Case à cocher · le contrôle natif porte l'accessibilité et le clavier, une
+   boîte peinte le rend visible (les pseudo-éléments ne sont pas fiables sur un
+   <input>). Rayon --r-check : assez arrondie pour appartenir au système, assez
+   carrée pour ne pas se lire comme un radio. */
+.yk-check{position:relative;display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.yk-check__input{position:absolute;top:0;left:0;width:20px;height:20px;margin:0;opacity:0;cursor:inherit}
+.yk-check__box{position:relative;display:grid;place-items:center;flex:none;width:20px;height:20px;border:1px solid var(--yk-line);border-radius:var(--r-check);background:var(--yk-surf-3);transition:background var(--dur-press) var(--ease-out),border-color var(--dur-press) var(--ease-out)}
+.yk-check__label{font:var(--fw-reg) 14px/1.4 var(--font-body);color:var(--yk-ink)}
+/* cochée · remplissage orange, coche en encre inverse */
+.yk-check__input:checked+.yk-check__box{background:var(--yk-accent);border-color:transparent}
+.yk-check__input:checked+.yk-check__box::after{content:"";width:5px;height:9.5px;border:solid var(--yk-on-accent);border-width:0 2.4px 2.4px 0;border-radius:1px;transform:rotate(45deg) translate(-1px,-1px)}
+/* partielle · une barre, jamais une coche à moitié. `indeterminate` est une
+   propriété JS, pas un attribut : la classe la double pour un rendu statique. */
+.yk-check__input:indeterminate+.yk-check__box,.yk-check--indeterminate .yk-check__box{background:var(--yk-accent);border-color:transparent}
+.yk-check__input:indeterminate+.yk-check__box::after,.yk-check--indeterminate .yk-check__box::after{content:"";width:10px;height:2.4px;border-radius:2px;background:var(--yk-on-accent);border:none;transform:none}
+@media (hover:hover) and (pointer:fine){
+.yk-check:hover .yk-check__box{border-color:var(--yk-line-strong)}
+.yk-check:hover .yk-check__input:checked+.yk-check__box{border-color:transparent}
+}
+.yk-check__input:focus-visible+.yk-check__box,.yk-check[data-state=focus] .yk-check__box{outline:2px solid var(--yk-accent);outline-offset:2px}
+.yk-check--disabled,.yk-check:has(.yk-check__input:disabled){opacity:.5;cursor:not-allowed}
+/* @endblock */
+
+/* @block switch */
+/* Bascule · piste et pouce en pilule (une des rares formes rondes par nature).
+   Le pouce glisse en 180 ms, décélération exponentielle, sans rebond. */
+.yk-switch{position:relative;display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.yk-switch__input{position:absolute;top:0;left:0;width:46px;height:27px;margin:0;opacity:0;cursor:inherit}
+.yk-switch__track{position:relative;flex:none;width:46px;height:27px;border-radius:var(--r-pill);background:var(--yk-surf-3);transition:background var(--dur-state) var(--ease-out)}
+.yk-switch__track::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:var(--r-pill);background:var(--yk-ink-3);transition:transform var(--dur-state) var(--ease-out),background var(--dur-state) var(--ease-out)}
+.yk-switch__label{font:var(--fw-reg) 14px/1.4 var(--font-body);color:var(--yk-ink)}
+.yk-switch__input:checked+.yk-switch__track{background:var(--yk-accent)}
+.yk-switch__input:checked+.yk-switch__track::after{background:var(--yk-on-accent);transform:translateX(19px)}
+.yk-switch__input:focus-visible+.yk-switch__track,.yk-switch[data-state=focus] .yk-switch__track{outline:2px solid var(--yk-accent);outline-offset:2px}
+.yk-switch--disabled,.yk-switch:has(.yk-switch__input:disabled){opacity:.5;cursor:not-allowed}
+/* @endblock */
+
+/* @block divider */
+/* Séparateur · le seul contrôle où la coupe à 21° survit (décision v2).
+   `rule` est le filet ordinaire, `notch` porte une étiquette, `cut` et
+   `faille` gardent leur géométrie de marque en SVG. */
+.yk-divider{display:block;width:100%;border:none;margin:0}
+.yk-divider--rule{height:1px;background:var(--yk-line)}
+.yk-divider--notch{display:flex;align-items:center;gap:14px}
+.yk-divider__line{flex:1;height:1px;background:var(--yk-line)}
+.yk-divider__line--short{flex:.3}
+.yk-divider__slash{flex:none;display:block;width:16px;height:7px;color:var(--yk-accent)}
+.yk-divider__label{flex:none;font-family:var(--font-mono);font-size:var(--fs-mono-xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-muted);white-space:nowrap}
+.yk-divider__svg{display:block;width:100%}
+/* @endblock */
+
+/* @block marker */
+/* Marqueur d'état · rond de 20 px (18 en `sm`). Trois ponctuations, jamais la
+   couleur seule : le kicker qui l'accompagne nomme toujours l'état en mots.
+   Le vert ne sert qu'ici et en pastille : « conforme, vérifié, prouvé ». */
+.yk-marker{display:grid;place-items:center;flex:none;width:20px;height:20px;border-radius:var(--r-pill)}
+.yk-marker svg{display:block;width:11px;height:11px}
+.yk-marker--info{background:transparent;border:1.5px solid var(--yk-ink-3)}
+.yk-marker--ok{background:var(--yk-ok);color:var(--yk-on-ok)}
+.yk-marker--alert{background:var(--yk-accent);color:var(--yk-on-accent)}
+.yk-marker--sm{width:18px;height:18px}
+.yk-marker--sm svg{width:10px;height:10px}
+/* @endblock */
+
+/* @block alert */
+/* Alerte · trois niveaux au gabarit IDENTIQUE : seule la ponctuation change.
+   Pas de fond teinté, pas de filet coloré · l'information est portée par le
+   marqueur et par le kicker écrit. */
+.yk-alert{display:flex;gap:14px;padding:16px 20px;border:1px solid var(--yk-line);border-radius:var(--r-card);background:var(--yk-surf-1)}
+.yk-alert__marker{margin-top:2px}
+.yk-alert__body{flex:1;min-width:0}
+.yk-alert__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.yk-alert__kicker{font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-ink-3)}
+.yk-alert--incident .yk-alert__kicker{color:var(--yk-accent-txt)}
+.yk-alert__time{font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-mono);color:var(--yk-ink-3);font-variant-numeric:tabular-nums}
+.yk-alert__title{margin:5px 0 0;font:var(--fw-semi) var(--fs-h6)/var(--lh-head) var(--font-head);letter-spacing:var(--ls-h4);color:var(--yk-ink)}
+.yk-alert__text{margin-top:3px;font-size:var(--fs-body-sm);line-height:var(--lh-body);color:var(--yk-ink-2)}
+/* @endblock */
+
+/* @block progress */
+/* Progression · piste et remplissage en pilule (forme ronde par nature).
+   La largeur du remplissage est une donnée : elle reste en style inline. */
+.yk-progress{display:block}
+.yk-progress__track{position:relative;height:8px;border-radius:var(--r-pill);background:var(--yk-surf-3);overflow:hidden}
+.yk-progress__fill{height:100%;border-radius:var(--r-pill);background:var(--yk-accent);transition:width var(--dur-surface) var(--ease-out)}
+.yk-progress--sm .yk-progress__track{height:5px}
+.yk-progress--lg .yk-progress__track{height:12px}
+/* le vert dit « vérifié » (une barre terminée et prouvée), le neutre sert aux
+   volumes et aux quotas qui n'ont rien à signaler */
+.yk-progress--ok .yk-progress__fill{background:var(--yk-ok)}
+.yk-progress--neutral .yk-progress__fill{background:var(--yk-line-strong)}
+.yk-progress__meta{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:8px}
+.yk-progress__label{font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-ink-3)}
+.yk-progress__value{font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-mono);color:var(--yk-ink-2);font-variant-numeric:tabular-nums}
+/* @endblock */
+
+/* @block toast */
+/* Notification · elle flotte réellement au-dessus du contenu, l'ombre est donc
+   justifiée (et c'est la seule élévation déclarée : pas de filet en plus... le
+   filet reste ici parce que le fond de la pile peut être de même valeur).
+   Entrée en TRANSITION et non en keyframes : une pile qui reçoit vite doit
+   pouvoir être redirigée en vol. */
+.yk-toast{position:relative;width:348px;max-width:100%;overflow:hidden;border:1px solid var(--yk-line);border-radius:var(--r-card);background:var(--yk-surf-1);box-shadow:var(--yk-shadow-2);opacity:1;transform:none;transition:opacity var(--dur-surface) var(--ease-out),transform var(--dur-surface) var(--ease-out)}
+.yk-toast--enter{opacity:0;transform:translateY(-8px) scale(.97)}
+.yk-toast__row{display:flex;gap:12px;padding:14px 14px 15px 16px}
+.yk-toast__marker{margin-top:1px}
+.yk-toast__body{flex:1;min-width:0}
+.yk-toast__head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.yk-toast__kicker{font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-ink-3)}
+.yk-toast--incident .yk-toast__kicker{color:var(--yk-accent-txt)}
+.yk-toast__time{font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-mono);color:var(--yk-ink-3);font-variant-numeric:tabular-nums}
+.yk-toast__title{margin:4px 0 0;font:var(--fw-semi) var(--fs-h6)/var(--lh-head) var(--font-head);letter-spacing:var(--ls-h4);color:var(--yk-ink)}
+.yk-toast__text{margin-top:3px;font-size:var(--fs-body-xs);line-height:var(--lh-body);color:var(--yk-ink-2)}
+.yk-toast__close{flex:none;display:grid;place-items:center;width:22px;height:22px;margin-top:1px;padding:0;border:none;border-radius:var(--r-pill);background:var(--yk-surf-3);color:var(--yk-ink-2);cursor:pointer;transition:background var(--dur-state) var(--ease-out),color var(--dur-state) var(--ease-out),transform var(--dur-press) var(--ease-out)}
+.yk-toast__close svg{display:block;width:9px;height:9px}
+@media (hover:hover) and (pointer:fine){.yk-toast__close:hover{background:var(--yk-line-strong);color:var(--yk-ink)}}
+.yk-toast__close:active{transform:scale(var(--press-scale))}
+.yk-toast__close:focus-visible{outline:2px solid var(--yk-accent);outline-offset:2px}
+/* piste d'auto-fermeture · elle s'écoule linéairement, la durée est posée en JS */
+.yk-toast__bar{position:absolute;left:0;bottom:0;height:2px;width:100%;background:var(--yk-surf-3);pointer-events:none}
+.yk-toast__bar>span{position:absolute;left:0;top:0;bottom:0;width:100%;background:var(--yk-line-strong)}
+.yk-toast--incident .yk-toast__bar>span{background:var(--yk-accent)}
+/* pile fixe · le contenu dessous reste cliquable */
+.yk-toast-stack{position:fixed;right:18px;top:18px;z-index:1400;display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none}
+.yk-toast-stack--bottom{top:auto;bottom:18px}
+.yk-toast-stack .yk-toast{pointer-events:auto}
+/* @endblock */
+
+/* @block badge */
+/* Badge · une étiquette d'état en mono capitales. La pastille de 6 px porte la
+   couleur, le libellé porte le mot : jamais l'un sans l'autre. */
+.yk-badge{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px;border:1px solid var(--yk-line);border-radius:var(--r-control-sm);background:var(--yk-surf-2);font:var(--fw-med) 11px/1 var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--yk-ink-2);white-space:nowrap}
+.yk-badge--accent{color:var(--yk-accent-txt)}
+.yk-badge__dot{flex:none;width:6px;height:6px;border-radius:var(--r-pill);background:var(--yk-ink-3)}
+.yk-badge--accent .yk-badge__dot{background:var(--yk-accent)}
+.yk-badge--ok .yk-badge__dot{background:var(--yk-ok)}
+/* @endblock */
+
+/* @block tag */
+/* Tag · filtre ou métadonnée. Sélectionné, il prend un aplat orange : c'est le
+   seul cas où un tag se remplit, et l'aplat tient lieu d'état.
+   Un tag cliquable est un <button aria-pressed>, pas un <span>. */
+.yk-tag{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 13px;border:1px solid var(--yk-line);border-radius:var(--r-control);background:var(--yk-surf-2);font:var(--fw-reg) 13px/1 var(--font-body);color:var(--yk-ink-2);white-space:nowrap;text-decoration:none;transition:background var(--dur-state) var(--ease-out),color var(--dur-state) var(--ease-out),border-color var(--dur-state) var(--ease-out)}
+button.yk-tag,a.yk-tag{cursor:pointer}
+@media (hover:hover) and (pointer:fine){button.yk-tag:hover,a.yk-tag:hover{background:var(--yk-surf-3);color:var(--yk-ink)}}
+.yk-tag[data-state=hover]{background:var(--yk-surf-3);color:var(--yk-ink)}
+.yk-tag--active,.yk-tag[aria-pressed=true]{background:var(--yk-accent);border-color:transparent;color:var(--yk-on-accent);font-weight:var(--fw-med)}
+.yk-tag--active[data-state=hover],.yk-tag[aria-pressed=true][data-state=hover]{background:color-mix(in srgb,var(--yk-accent) 88%,var(--yk-ink));color:var(--yk-on-accent)}
+.yk-tag__dot{flex:none;width:6px;height:6px;border-radius:var(--r-pill);background:var(--yk-accent)}
+.yk-tag--active .yk-tag__dot,.yk-tag[aria-pressed=true] .yk-tag__dot{background:var(--yk-on-accent)}
+.yk-tag__remove{display:grid;place-items:center;flex:none;width:14px;height:14px;margin-right:-3px;padding:0;border:none;background:none;color:inherit;opacity:.7;cursor:pointer;font:var(--fw-reg) 14px/1 var(--font-mono)}
+.yk-tag__remove:hover{opacity:1}
+.yk-tag:focus-visible,.yk-tag__remove:focus-visible,.yk-tag[data-state=focus]{outline:2px solid var(--yk-accent);outline-offset:2px}
+/* @endblock */
+
+/* @block nav */
+/* Navigation · barre flottante au rayon de grand plan, et LA seule surface en
+   verre du système (matière C : chrome flottant). Le contenu passe dessous, le
+   flou dit qu'une couche flotte ; ailleurs tout est encre pleine.
+   L'onglet actif porte un souligné orange arrondi · un des cinq emplois. */
+.yk-nav{position:relative;display:flex;align-items:center;gap:24px;padding:10px 14px 10px 20px;border:1px solid var(--yk-chrome-line);border-radius:var(--r-plan);background:var(--yk-chrome);backdrop-filter:blur(var(--yk-chrome-blur)) saturate(1.5);-webkit-backdrop-filter:blur(var(--yk-chrome-blur)) saturate(1.5)}
+.yk-nav__sheen{position:absolute;inset:0 0 auto;height:1px;border-radius:inherit;background:var(--yk-chrome-sheen);pointer-events:none}
+.yk-nav__items{display:flex;align-items:center;gap:22px}
+.yk-nav__brand{display:flex;align-items:center;flex:none;text-decoration:none}
+.yk-nav__brand img,.yk-nav__brand svg{display:block;height:18px;width:auto}
+.yk-nav__item{position:relative;display:flex}
+.yk-nav__link{position:relative;display:inline-flex;align-items:center;padding:6px 0 8px;border:none;background:transparent;font:var(--fw-med) var(--fs-body-sm)/1 var(--font-body);color:var(--yk-ink-2);text-decoration:none;cursor:pointer;transition:color var(--dur-state) var(--ease-out)}
+@media (hover:hover) and (pointer:fine){.yk-nav__link:where(a,button,input,select,textarea,summary,label,[role=button],[role=link],[role=menuitem],[tabindex]):hover{color:var(--yk-ink);text-decoration:none}}
+.yk-nav__link--active,.yk-nav__link[aria-expanded=true],.yk-nav__link[data-state=hover]{color:var(--yk-ink)}
+.yk-nav__link--active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--yk-accent)}
+.yk-nav__link:focus-visible{outline:2px solid var(--yk-accent);outline-offset:3px;border-radius:3px}
+.yk-nav__caret{flex:none;width:9px;height:6px;margin-left:6px;opacity:.7}
+.yk-nav__right{margin-left:auto;display:flex;align-items:center;gap:10px}
+/* panneau déroulant · il s'ouvre DEPUIS son déclencheur (origine haut-gauche) */
+.yk-nav__menu{position:absolute;left:-8px;top:calc(100% + 10px);z-index:40;min-width:216px;padding:8px;border:1px solid var(--yk-line);border-radius:var(--r-card);background:var(--yk-surf-1);box-shadow:var(--yk-shadow-2);transform-origin:top left;opacity:1;transform:none;transition:opacity var(--dur-state) var(--ease-out),transform var(--dur-state) var(--ease-out)}
+.yk-nav__menu--enter{opacity:0;transform:scale(.96) translateY(-4px)}
+.yk-nav__menu-item{display:block;width:100%;padding:9px 12px;border:none;border-radius:var(--r-xs);background:transparent;font:var(--fw-med) var(--fs-body-sm)/1.3 var(--font-body);color:var(--yk-ink-2);text-align:left;text-decoration:none;white-space:nowrap;cursor:pointer;transition:color var(--dur-state) var(--ease-out),background var(--dur-state) var(--ease-out)}
+@media (hover:hover) and (pointer:fine){.yk-nav__menu-item:where(a,button,input,select,textarea,summary,label,[role=button],[role=link],[role=menuitem],[tabindex]):hover{background:var(--yk-surf-3);color:var(--yk-ink);text-decoration:none}}
+.yk-nav__menu-item[data-state=hover]{background:var(--yk-surf-3);color:var(--yk-ink)}
+.yk-nav__menu-item:focus-visible{outline:2px solid var(--yk-accent);outline-offset:-2px}
+/* @endblock */
+
+/* @block pagination */
+/* Pagination · cellules au rayon de contrôle. La page courante s'INVERSE
+   (encre pleine) au lieu de prendre l'orange : une page n'est pas une action
+   principale, et l'aplat orange est réservé au bouton primaire. */
+.yk-pagination{display:inline-flex;align-items:center;gap:8px}
+.yk-pagination__cell{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;padding:0 12px;border:1px solid var(--yk-line);border-radius:var(--r-control);background:var(--yk-surf-2);color:var(--yk-ink-2);font:var(--fw-med) 13px/1 var(--font-mono);font-variant-numeric:tabular-nums;text-decoration:none;cursor:pointer;transition:background var(--dur-state) var(--ease-out),color var(--dur-state) var(--ease-out),border-color var(--dur-state) var(--ease-out)}
+.yk-pagination__cell svg{display:block;width:15px;height:15px}
+@media (hover:hover) and (pointer:fine){.yk-pagination__cell:where(a,button,input,select,textarea,summary,label,[role=button],[role=link],[role=menuitem],[tabindex]):hover:not(:disabled):not(.yk-pagination__cell--active){background:var(--yk-surf-3);color:var(--yk-ink);text-decoration:none}}
+.yk-pagination__cell[data-state=hover]{background:var(--yk-surf-3);color:var(--yk-ink)}
+.yk-pagination__cell--active,.yk-pagination__cell[aria-current=page]{background:var(--yk-ink);border-color:transparent;color:var(--yk-bg)}
+.yk-pagination__cell:disabled,.yk-pagination__cell[aria-disabled=true]{color:var(--yk-ink-3);opacity:.45;cursor:not-allowed}
+.yk-pagination__cell:focus-visible{outline:2px solid var(--yk-accent);outline-offset:2px}
+.yk-pagination__gap{min-width:20px;text-align:center;font:var(--fw-reg) 13px/1 var(--font-mono);color:var(--yk-ink-3);user-select:none}
+/* @endblock */
+
+/* @block ymark */
+/* y-mark · SCELLÉ. Jamais déformé : ni rotation, ni cisaillement, ni
+   étirement · échelle uniforme uniquement, et le carré reste carré.
+   La couleur passe par `color` (le tracé est en currentColor). */
+.yk-ymark{display:block;flex:none;color:var(--yk-ink)}
+.yk-ymark--on-ink{color:var(--yk-on-ink)}
+.yk-ymark--accent{color:var(--yk-accent)}
+.yk-ymark--current{color:currentColor}
+/* @endblock */
+
+/* @block lockup */
+/* Lockup · y-mark scellé + wordmark « youkyi_ ». L'underscore est le SEUL
+   orange autorisé ici : l'orange ne se pose jamais sur les lettres. */
+.yk-lockup{display:inline-flex;align-items:center;gap:12px}
+.yk-lockup--sm{gap:8px}
+.yk-lockup--lg{gap:16px}
+.yk-lockup--stacked{flex-direction:column;align-items:flex-start}
+.yk-lockup__mark{flex:none;width:32px;height:32px}
+.yk-lockup--sm .yk-lockup__mark{width:22px;height:22px}
+.yk-lockup--lg .yk-lockup__mark{width:52px;height:52px}
+.yk-lockup__text{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.yk-lockup__word{font-family:var(--font-display);font-weight:var(--fw-bold);font-size:24px;line-height:1;letter-spacing:var(--ls-display);color:var(--yk-ink);white-space:nowrap}
+.yk-lockup--sm .yk-lockup__word{font-size:16px}
+.yk-lockup--lg .yk-lockup__word{font-size:38px}
+.yk-lockup__word u{text-decoration:none;color:var(--yk-accent)}
+.yk-lockup__baseline{font-family:var(--font-mono);font-size:10px;letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-muted);white-space:nowrap}
+.yk-lockup--sm .yk-lockup__baseline{font-size:9px}
+.yk-lockup--lg .yk-lockup__baseline{font-size:11px}
+/* posé sur une masse encre : les lettres passent en clair, l'underscore reste orange */
+.yk-lockup--on-ink .yk-lockup__word{color:var(--yk-on-ink)}
+.yk-lockup--on-ink .yk-lockup__baseline{color:var(--yk-on-ink-muted)}
+/* @endblock */
+
+/* @block terminal */
+/* Terminal · fenêtre façon macOS. Palette VERROUILLÉE sombre même en page
+   claire : c'est un objet cité, comme un bloc de code, pas un composant
+   d'interface. Le titre de la barre est en Inter (titre de fenêtre) · le mono
+   est réservé au corps, là où les colonnes et les chiffres s'alignent.
+   Une seule pastille est vive, et elle est orange. */
+.yk-term{overflow:hidden;border:1px solid var(--yk-term-line);border-radius:var(--r-card);background:var(--yk-term-bg);font:var(--fw-reg) 13px/1.6 var(--font-mono)}
+.yk-term__bar{position:relative;display:flex;align-items:center;min-height:36px;padding:0 14px;border-bottom:1px solid var(--yk-term-line);background:var(--yk-term-bar)}
+.yk-term__dots{display:flex;align-items:center;gap:8px;flex:none}
+.yk-term__dot{flex:none;width:10px;height:10px;border-radius:var(--r-pill);background:var(--yk-term-line)}
+.yk-term__dot--live{background:var(--yk-term-accent)}
+.yk-term__title{position:absolute;left:50%;transform:translateX(-50%);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:var(--fw-med) 12.5px/1 var(--font-body);letter-spacing:-.005em;color:var(--yk-term-muted)}
+.yk-term__body{padding:16px 18px;overflow-x:auto;white-space:pre;color:var(--yk-term-fg)}
+/* coloration du corps · la palette du terminal est verrouillée, ces six
+   classes sont les seules couleurs admises à l'intérieur */
+.yk-term-prompt{color:var(--yk-term-accent)}
+.yk-term-path{color:var(--yk-term-muted)}
+.yk-term-out{color:var(--yk-term-muted)}
+.yk-term-ok{color:var(--yk-term-ok)}
+.yk-term-err{color:var(--yk-term-err)}
+.yk-term-mark{color:var(--yk-term-accent)}
+/* @endblock */
+
+/* @block chart */
+/* Graphique · la géométrie est calculée en SVG par le composant (échelle,
+   graduations, marges dérivées des libellés) : la couche de classes ne porte
+   que l'enveloppe, la légende et la note. Une figure n'est pas un contrôle,
+   elle n'a ni état ni survol.
+   UNE seule série orange par graphique · `--viz-hot`. Aucun camembert, aucun
+   dégradé, aucune ombre, aucune 3D. */
+.yk-figure{display:flex;flex-direction:column;gap:14px}
+.yk-chart{display:block;width:100%;height:auto;font-family:var(--font-mono)}
+.yk-figure__head{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+.yk-figure__title{font:var(--fw-semi) var(--fs-h6)/var(--lh-head) var(--font-head);letter-spacing:var(--ls-h4);color:var(--yk-ink)}
+.yk-figure__kicker{font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-ink-3)}
+.yk-figure__note{font-size:var(--fs-body-xs);line-height:var(--lh-body);color:var(--yk-ink-3)}
+.yk-legend{display:flex;flex-wrap:wrap;gap:8px 18px}
+.yk-legend__item{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-ink-3)}
+.yk-legend__key{flex:none;width:10px;height:10px;border-radius:3px;background:var(--viz-1)}
+.yk-legend__item--2 .yk-legend__key{background:var(--viz-2)}
+.yk-legend__item--3 .yk-legend__key{background:var(--viz-3)}
+.yk-legend__item--4 .yk-legend__key{background:var(--viz-4);border:1px solid var(--yk-line-strong)}
+.yk-legend__item--hot .yk-legend__key{background:var(--viz-hot)}
+.yk-legend__item--hot{color:var(--yk-accent-txt)}
+/* @endblock */
+
+/* @block timeline */
+/* Frise · même principe que le graphique : la pente Φ et les jalons sont
+   calculés en SVG, les classes ne portent que l'enveloppe et la légende.
+   La frise avance en chevrons, jamais en courbe. */
+.yk-timeline{display:block;width:100%;height:auto;font-family:var(--font-mono)}
+/* @endblock */
+
+/* @block hero */
+/* Hero · bloc d'ouverture. En v2 il est OUVERT : pas d'aplat, pas de verre, pas
+   de coupe sur le bloc lui-même · la page porte son fond, le hero porte son
+   texte. La seule géométrie de marque est la frontière basse, qui est un
+   séparateur `cut` (le seul endroit où la coupe à 21° survit).
+   Un seul kicker par page, et c'est en général celui-ci. */
+.yk-hero{position:relative;padding:88px 72px 100px;overflow:hidden}
+.yk-hero--ink{background:var(--yk-ink-solid)}
+.yk-hero__inner{position:relative;max-width:780px}
+.yk-hero--center .yk-hero__inner{margin:0 auto;text-align:center}
+.yk-hero__kicker{font-family:var(--font-mono);font-size:var(--fs-mono);letter-spacing:var(--ls-kicker);text-transform:uppercase;color:var(--yk-accent-txt);margin-bottom:22px}
+.yk-hero--ink .yk-hero__kicker{color:var(--yk-on-ink-accent)}
+.yk-hero__title{margin:0;font:var(--fw-semi) var(--fs-display-2)/var(--lh-tight) var(--font-head);letter-spacing:-.01em;color:var(--yk-ink);text-wrap:pretty}
+.yk-hero--ink .yk-hero__title{color:var(--yk-on-ink)}
+.yk-hero__lead{max-width:58ch;margin:24px 0 0;font-size:19px;line-height:var(--lh-body);color:var(--yk-ink-2);text-wrap:pretty}
+.yk-hero--center .yk-hero__lead{margin-left:auto;margin-right:auto}
+.yk-hero--ink .yk-hero__lead{color:var(--yk-on-ink-soft)}
+.yk-hero__actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:36px}
+.yk-hero--center .yk-hero__actions{justify-content:center}
+.yk-hero__edge{position:absolute;left:0;right:0;bottom:0;display:block}
+/* @endblock */
+
+/* @block offers */
+/* Offres · trois colonnes en encre pleine. La colonne recommandée ne se
+   distingue pas par une couleur de fond mais par TROIS signaux discrets :
+   elle monte de 8 px, son filet passe en `line-strong`, et son bouton est le
+   primaire de la section · un seul aplat orange pour les trois.
+
+   GRILLE : `auto-fit` + `minmax`, pour que la série se replie d'elle-même dans
+   une colonne étroite (gabarit à flanc, tablette) au lieu de déborder. Le
+   `min-width:0` est indispensable : sans lui un élément de grille ne peut pas
+   descendre sous son min-content, et le bouton pleine largeur en `nowrap`
+   imposerait sa largeur à toute la piste — les colonnes deviendraient inégales
+   dans une grille dont le seul but est la comparaison.
+
+   PAS DE PRIX. La ligne forte de la colonne (`__engagement`, ex-`__price`) porte
+   la FORME de l'engagement · « 3 jours sur site », « sur devis », « au mois ».
+   Jamais un montant : une infra n'est jamais la même, un prix affiché est soit
+   une perte, soit un mensonge, et « dès 1 800 € » sans dire ce qu'il y a dedans
+   contredit « sans boîte noire ». Ce qui rassure à la place vit dans
+   `__factors` : ce qui DÉTERMINE le prix. */
+.yk-offers{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;align-items:stretch}
+.yk-offer{position:relative;display:flex;flex-direction:column;min-width:0;padding:24px 22px 26px;border:1px solid var(--yk-line);border-radius:var(--r-card);background:var(--yk-surf-1)}
+.yk-offer--rec{border-color:var(--yk-line-strong);transform:translateY(-8px);background:var(--yk-surf-2)}
+.yk-offer__head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.yk-offer__name{font:var(--fw-semi) var(--fs-h3)/var(--lh-head) var(--font-head);letter-spacing:var(--ls-h2);color:var(--yk-ink)}
+.yk-offer__flag{flex:none;white-space:nowrap;font-family:var(--font-mono);font-size:var(--fs-mono-xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-accent-txt)}
+/* DEUX LIGNES RÉSERVÉES · la grille d'offres n'existe que pour comparer, donc
+   le filet interne et les puces doivent s'aligner d'une colonne à l'autre même
+   quand un libellé se replie. La hauteur est réservée, pas imposée. */
+.yk-offer__engagement,.yk-offer__price{margin-top:10px;min-height:2.9em;font-family:var(--font-mono);font-size:13px;line-height:1.45;letter-spacing:var(--ls-mono);color:var(--yk-accent-txt);font-variant-numeric:tabular-nums}
+.yk-offer__tagline{margin-top:6px;font-size:14px;line-height:var(--lh-body);color:var(--yk-ink)}
+.yk-offer__rule{height:1px;margin:18px 0;background:var(--yk-line)}
+.yk-offer__list{flex:1;display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.yk-offer__item{display:flex;gap:10px;font-size:13.5px;line-height:1.5;color:var(--yk-ink-2)}
+.yk-offer__check{flex:none;margin-top:2px;width:14px;height:14px;color:var(--yk-ink-3)}
+.yk-offer--rec .yk-offer__check{color:var(--yk-ok)}
+.yk-offer__check svg{display:block;width:100%;height:100%}
+.yk-offer__cta{margin-top:22px}
+/* ce qui détermine le prix · le bloc qui remplace la grille tarifaire */
+.yk-offer-factors{margin-top:22px;padding:18px 22px;border:1px solid var(--yk-line);border-radius:var(--r-card);background:var(--yk-surf-1)}
+.yk-offer-factors__title{font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-ink-3)}
+.yk-offer-factors__list{display:flex;flex-wrap:wrap;gap:8px 26px;margin:12px 0 0;padding:0;list-style:none}
+.yk-offer-factors__item{display:flex;gap:9px;font-size:13.5px;line-height:1.5;color:var(--yk-ink-2)}
+.yk-offer-factors__item::before{content:"";flex:none;margin-top:7px;width:5px;height:5px;background:var(--yk-ink-3)}
+/* seule exception à la hauteur fixe du bouton : en colonne étroite, un libellé
+   long se replie plutôt que d'élargir la piste. La hauteur minimale reste 40. */
+.yk-offer__cta .yk-btn{height:auto;min-height:40px;padding-top:11px;padding-bottom:11px;white-space:normal;line-height:1.25;text-align:center}
+/* @endblock */
+
+/* @block cta */
+/* Bande d'appel · encre pleine. `ink` clôt une page (masse verrouillée),
+   `surface` ponctue à l'intérieur d'une page. Rayon de grand plan. */
+.yk-cta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:32px;padding:34px 40px;border:1px solid var(--yk-line);border-radius:var(--r-plan);background:var(--yk-surf-2)}
+.yk-cta--ink{border-color:transparent;background:var(--yk-ink-solid)}
+.yk-cta__body{max-width:56ch}
+.yk-cta__title{font:var(--fw-semi) var(--fs-h2)/var(--lh-head) var(--font-head);letter-spacing:var(--ls-h2);color:var(--yk-ink);text-wrap:pretty}
+.yk-cta--ink .yk-cta__title{color:var(--yk-on-ink)}
+.yk-cta__text{margin-top:10px;font-size:15px;line-height:var(--lh-body);color:var(--yk-ink-2)}
+.yk-cta--ink .yk-cta__text{color:var(--yk-on-ink-soft)}
+/* @endblock */
+
+/* @block site-footer */
+/* Pied de site · même principe que le hero : ouvert par défaut, et sa frontière
+   haute est un séparateur `cut`. `ink` en fait une masse de clôture. */
+.yk-site-footer{position:relative;padding-top:8px}
+.yk-site-footer--ink{background:var(--yk-ink-solid)}
+.yk-site-footer__edge{position:absolute;top:0;left:0;right:0;display:block}
+.yk-site-footer__top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:48px;padding:52px 56px 30px}
+.yk-site-footer__brand{max-width:34ch}
+.yk-site-footer__baseline{margin:18px 0 0;font-size:14px;line-height:var(--lh-body);color:var(--yk-ink-2)}
+.yk-site-footer--ink .yk-site-footer__baseline{color:var(--yk-on-ink-soft)}
+.yk-site-footer__cols{display:flex;flex-wrap:wrap;gap:56px}
+.yk-site-footer__col-title{margin-bottom:14px;font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-ink-3)}
+.yk-site-footer--ink .yk-site-footer__col-title{color:var(--yk-on-ink-muted)}
+.yk-site-footer__links{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.yk-site-footer__link{display:inline-block;font-size:14px;color:var(--yk-ink-2);text-decoration:none;transition:color var(--dur-state) var(--ease-out),transform var(--dur-state) var(--ease-out)}
+/* survol · le seul passage de valeur (ink-2 → ink) ne se lit pas dans une
+   colonne de liens : on lui ajoute un pas de 3 px vers la droite. Geste de
+   déplacement, pas de couleur · l'accent reste réservé au signal. */
+@media (hover:hover) and (pointer:fine){.yk-site-footer__link:where(a,button,input,select,textarea,summary,label,[role=button],[role=link],[role=menuitem],[tabindex]):hover{color:var(--yk-ink);text-decoration:none;transform:translateX(3px)}}
+@media (prefers-reduced-motion:reduce){.yk-site-footer__link:hover{transform:none}}
+.yk-site-footer--ink .yk-site-footer__link{color:var(--yk-on-ink-soft)}
+.yk-site-footer--ink .yk-site-footer__link:hover{color:var(--yk-on-ink)}
+.yk-site-footer__link:focus-visible{outline:2px solid var(--yk-accent);outline-offset:3px;border-radius:3px}
+.yk-site-footer__legal{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-top:18px;padding:16px 56px 40px;border-top:1px solid var(--yk-line);font-family:var(--font-mono);font-size:11px;letter-spacing:var(--ls-mono);color:var(--yk-ink-3)}
+.yk-site-footer--ink .yk-site-footer__legal{border-top-color:var(--yk-on-ink-faint);color:var(--yk-on-ink-muted)}
+/* @endblock */
+
+/* @block article */
+/* Carte d'article · c'est une carte, donc rayon de carte et filet 1 px. La
+   pente à 21° ne survit ici que dans le SEMIS de la zone image · un motif de
+   fond, localisé et fondu, pas une découpe de la carte. */
+.yk-article{position:relative;display:block;overflow:hidden;border:1px solid var(--yk-line);border-radius:var(--r-card);background:var(--yk-surf-1);text-decoration:none;transition:background var(--dur-state) var(--ease-out),border-color var(--dur-state) var(--ease-out)}
+.yk-article__media{display:block;position:relative;aspect-ratio:16/9;overflow:hidden;border-bottom:1px solid var(--yk-line);background:var(--yk-surf-2)}
+.yk-article__semis{position:absolute;inset:0;background-image:repeating-linear-gradient(21deg,transparent 0 24px,var(--yk-semis,var(--yk-line)) 24px 25px)}
+.yk-article__media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.yk-article__ph{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--font-mono);font-size:var(--fs-mono-xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-ink-3)}
+.yk-article__body{display:block;padding:20px 22px 22px}
+.yk-article__cat{display:block;font-family:var(--font-mono);font-size:var(--fs-mono-sm);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--yk-ink-3)}
+.yk-article__title{display:block;margin:10px 0 0;font:var(--fw-semi) var(--fs-h4)/var(--lh-head) var(--font-head);letter-spacing:var(--ls-h4);color:var(--yk-ink);text-wrap:pretty;transition:color var(--dur-state) var(--ease-out)}
+.yk-article__excerpt{display:block;margin:8px 0 0;font-size:13px;line-height:var(--lh-body);color:var(--yk-ink-2)}
+.yk-article__meta{display:flex;align-items:center;gap:10px;margin-top:16px;font-family:var(--font-mono);font-size:var(--fs-mono);letter-spacing:var(--ls-mono);color:var(--yk-ink-3)}
+@media (hover:hover) and (pointer:fine){
+.yk-article:where(a,button,input,select,textarea,summary,label,[role=button],[role=link],[role=menuitem],[tabindex]):hover{background:var(--yk-surf-2);border-color:var(--yk-line-strong);text-decoration:none}
+.yk-article:where(a,button,input,select,textarea,summary,label,[role=button],[role=link],[role=menuitem],[tabindex]):hover .yk-article__title{color:var(--yk-accent-txt)}
+}
+.yk-article[data-state=hover]{background:var(--yk-surf-2);border-color:var(--yk-line-strong)}
+.yk-article[data-state=hover] .yk-article__title{color:var(--yk-accent-txt)}
+.yk-article:focus-visible{outline:2px solid var(--yk-accent);outline-offset:2px}
+/* @endblock */

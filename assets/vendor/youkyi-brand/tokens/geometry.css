@@ -1,0 +1,33 @@
+/* youkyi · DA v2 · GÉOMÉTRIE (la pente)
+   La pente reste la signature de la marque, mais elle ne gouverne plus les
+   contrôles : en v2 le rayon est la forme par défaut (voir radius.css).
+   Une seule pente : 1/Φ² ≈ 21° (ratio 0,382). Deux emplois conservés :
+   le wordmark / y-mark, et les motifs de fond (semis localisé et fondu).
+   Les tokens de coupe restent pour le print et les artefacts v1. */
+
+:root {
+  /* ---- la constante ---- */
+  --phi:        0.382;    /* @kind other */ /* 1/Φ² · le petit décalage = 0,382 × le grand */
+  --phi-inv:    2.618;    /* @kind other */ /* Φ²   · l'inverse (coupes raides) */
+  --phi-angle:  20.9deg;  /* @kind other */ /* pente douce, mesurée depuis l'horizontale */
+  --phi-steep:  69.1deg;  /* @kind other */ /* pente raide (90 − 20,9) */
+
+  /* ---- coupes RAIDES (contrôles : bouton, champ, badge, tag, barre) ----
+     dx = 0,382 × dy  →  petit coin quasi vertical, tranché en bas-droite */
+  --cut-dy:     12px;  --cut-dx:     4.6px;   /* défaut contrôle (h ≈ 34px) */
+  --cut-dy-sm:  6px;   --cut-dx-sm:  2.3px;   /* micro (badge, tag) */
+  --cut-dy-lg:  16px;  --cut-dx-lg:  6.1px;   /* contrôle haut / large */
+
+  /* ---- coupes DOUCES (plans : carte, en-tête, hero, footer) ----
+     dy = 0,382 × dx  →  longue diagonale posée, arête en haut-droite */
+  --bevel-dx:   42px;  --bevel-dy:   16px;    /* carte (16/42 = 0,381) */
+  --bevel-dx-lg:110px; --bevel-dy-lg:42px;    /* hero, dalle (42/110 = 0,382) */
+
+  /* ---- épaisseurs d'arête (le fil orange sur la coupe) ---- */
+  --edge-w:        2px;    /* survol : fil partiel */
+  --edge-w-strong: 2.5px;  /* actif  : fil plein sur toute l'arête */
+
+  /* ---- rayon : voir tokens/radius.css ----
+     v2 : la règle « rayon = 0 » est abandonnée. --radius vaut désormais
+     --r-card, et l'échelle complète (5 crans) vit dans radius.css. */
+}

@@ -1,11 +1,8 @@
 // Définitions des réseaux : libellé par défaut + SVG inline (viewBox 0 0 24 24,
 // fill="currentColor" pour hériter de la couleur de l'icône).
 //
-// Les COULEURS de marque ne vivent PAS ici : elles sont définies en CSS
-// (src/input.css, sélecteurs `.is-<reseau> svg`), pour rester compatibles avec
-// la CSP stricte (`style-src 'self'`, aucun attribut style= inline).
-// Les marques monochromes (X, GitHub, Threads) n'ont pas de couleur dédiée :
-// leur icône hérite de `.link-icon` et s'adapte donc au thème clair/sombre.
+// Les logos héritent de `.link-icon` ; leur couleur éventuelle vit dans `.is-<network> svg`.
+// Le pictogramme d'interface Mail est fourni par youkyi-brand au build.
 
 const svg = (path) =>
   `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${path}</svg>`;

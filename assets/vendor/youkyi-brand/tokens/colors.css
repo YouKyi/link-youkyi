@@ -1,0 +1,181 @@
+/* youkyi · DA oblique · COLOR TOKENS
+   Source de vérité : oblique-planche.html (itérations 05-42).
+   Neutres mats + orange UNIQUE. Sombre = mat, jamais de teinte lavée.
+   L'orange ne décore pas : il SIGNALE, et se pose sur une arête de coupe.
+   Aucun hex en dur dans les artefacts · toujours via var(). */
+
+:root {
+  /* ---- base neutres (clair) ---- */
+  --yk-bg:          #F8F7F4;  /* fond de page, mat */
+  --yk-panel:       #FFFFFF;  /* mur / panneau clair */
+  --yk-slat:        #EFECE6;  /* strate / facette sombre-de-clair */
+  --yk-ink:         #1A1816;  /* encre · texte, masses pleines */
+  --yk-muted:       #6E6A63;  /* texte atténué, méta mono */
+  --yk-line:        #E2DED6;  /* filet 1px par défaut */
+  --yk-line-strong: #C9C3B8;  /* filet fort, arêtes de construction */
+  --yk-grid:        rgba(26,24,22,.05); /* trame de fond 34px */
+
+  /* ---- v2 · rampe d'élévation (matière C : encre pleine, séparation par la VALEUR) ----
+     Un filet 1px seulement quand deux plans de même valeur se touchent.
+     L'élévation se déclare UNE fois : filet OU ombre, jamais les deux. */
+  --yk-surf-1:      #FFFFFF;  /* plan posé sur la page */
+  --yk-surf-2:      #F2EFE9;  /* plan au-dessus du précédent */
+  --yk-surf-3:      #EAE6DE;  /* creux, piste de switch, fond de champ pressé */
+
+  /* ---- v2 · rampe de texte ---- */
+  --yk-ink-2:       #57534C;  /* secondaire · corps atténué, sous-titre (7,2:1 sur --yk-surf-2) */
+  --yk-ink-3:       #666259;  /* tertiaire · méta, kicker, placeholder (5,3:1 sur --yk-surf-2 · 4,9:1 sur --yk-surf-3) */
+
+  /* ---- v2 · chrome flottant : LA seule surface en verre (matière C) ----
+     Barre de navigation, panneau au-dessus du contenu. Jamais une carte,
+     jamais un champ, jamais un fond de section. */
+  --yk-chrome:      rgba(255,255,255,.62);
+  --yk-chrome-line: rgba(26,24,22,.08);
+  --yk-chrome-blur: 20px;      /* @kind other */
+  --yk-chrome-sheen: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); /* @kind other */
+
+  /* ---- v2 · ombres · thème CLAIR et print uniquement ----
+     Toujours un décalage vertical + un flou large. Une ombre sans décalage
+     est un halo, donc une décoration : interdite. */
+  --yk-shadow-1:    0 1px 2px rgba(26,24,22,.05), 0 10px 24px -14px rgba(26,24,22,.18);
+  --yk-shadow-2:    0 2px 4px rgba(26,24,22,.06), 0 18px 40px -22px rgba(26,24,22,.22);
+
+  /* ---- l'orange unique ---- */
+  --yk-accent:      #D6470D;  /* orange de coupe · arête, remplissage d'état */
+  --yk-accent-deep: #B4380A;  /* orange foncé · fond de bouton sous libellé blanc (AA) */
+  --yk-accent-txt:  #AF3A0B;  /* variante TEXTE accessible sur clair (liens, chiffres) · 5,7:1 */
+  --yk-on-accent:   #FFFFFF;  /* encre posée SUR l'orange (libellé gras ≥16px) */
+  /* A11Y : #D6470D N'EST PAS un texte courant sur clair (4,1:1). Pour du texte,
+     toujours --yk-accent-txt. La couleur n'est jamais le seul vecteur d'info. */
+
+  /* ---- v2 · le vert de conformité, ACCORDÉ à l'orange ----
+     L'ancien vert venait de la palette du terminal et n'avait jamais été mis en
+     rapport avec l'orange : il paraissait éteint à côté. Défini en oklch à la
+     MÊME CLARTÉ que l'orange, avec un chroma un cran en dessous pour que
+     l'orange reste le signal le plus fort. Emploi : « conforme, vérifié, prouvé »
+     · en remplissage de marqueur ou en pastille, jamais en texte courant. */
+  --yk-ok:          oklch(.597 .15 149);
+  --yk-on-ok:       #FFFFFF;
+
+  /* ---- terminal (palette verrouillée : toujours sombre, même en page claire) ---- */
+  --yk-term-bg:     #131211;
+  --yk-term-bar:    #211E1B;
+  --yk-term-line:   #3A342E;
+  --yk-term-fg:     #F2F0EC;
+  --yk-term-muted:  #98938B;
+  --yk-term-accent: #FF6A2E;
+  --yk-term-ok:     oklch(.703 .16 149); /* = --yk-ok sombre · le terminal est toujours sombre, il reprend donc le vert accordé à l'orange */
+  --yk-term-err:    #F0857A;
+
+  /* ---- encre matérielle (VERROUILLÉE : les masses pleines restent sombres
+     dans tous les thèmes, comme le terminal · un footer encre ne devient
+     jamais clair en mode sombre) ---- */
+  --yk-ink-solid:     #1A1816;               /* fond des masses encre : footer, CTA, hero/card ink */
+  --yk-on-ink:        #F8F7F4;               /* texte principal posé sur l'encre */
+  --yk-on-ink-soft:   rgba(248,247,244,.78); /* liens, texte secondaire sur encre */
+  --yk-on-ink-muted:  rgba(248,247,244,.62); /* texte atténué sur encre */
+  --yk-on-ink-faint:  rgba(242,240,236,.2);  /* filets, frontières sur encre */
+  --yk-on-ink-accent: #FF8F5C;               /* accent TEXTE lisible sur encre */
+  /* chrome flottant posé SUR une masse encre · fixe dans tous les thèmes, comme
+     le reste de la famille : une pastille de verre sur un plan d'encre ne
+     redevient pas claire parce que la page, elle, est claire. */
+  --yk-chrome-ink:      rgba(19,18,17,.5);
+  --yk-chrome-ink-line: rgba(242,240,236,.14);
+
+  /* ---- alias sémantiques (à préférer dans les artefacts) ---- */
+  --surface-page:   var(--yk-bg);
+  --surface-panel:  var(--yk-panel);
+  --surface-slat:   var(--yk-slat);
+  --surface-ink:    var(--yk-ink);
+  --text:           var(--yk-ink);
+  --text-muted:     var(--yk-muted);
+  --text-on-ink:    var(--yk-bg);
+  --border:         var(--yk-line);
+  --border-strong:  var(--yk-line-strong);
+  --edge:           var(--yk-accent);      /* l'orange, sur une arête */
+  --edge-txt:       var(--yk-accent-txt);
+  --on-edge:        var(--yk-on-accent);
+  --text-2:         var(--yk-ink-2);
+  --text-3:         var(--yk-ink-3);
+  --surface-1:      var(--yk-surf-1);
+  --surface-2:      var(--yk-surf-2);
+  --surface-3:      var(--yk-surf-3);
+}
+
+/* ---- v2 · TERRITOIRE DE L'ORANGE (cinq emplois, pas un de plus) ----
+   1. le remplissage du bouton primaire · le seul aplat orange, un par écran
+   2. l'anneau de focus · 2px, décalé de 2px, jamais un halo diffus
+   3. le soulignement de la navigation active et le survol de lien
+   4. une pastille d'état de 6px, et une seule série de données mise en avant
+   5. l'underscore du wordmark
+   REFUSÉ : fond de section, texte long, dégradé, halo, icône teintée par
+   défaut, et l'orange comme SEUL vecteur d'information. */
+
+/* ---- SOMBRE = MAT (aucune teinte lavée) ---- */
+.dark, [data-theme="dark"] {
+  --yk-bg:          #131211;
+  --yk-panel:       #191715;
+  --yk-slat:        #211E1B;
+  --yk-ink:         #F2F0EC;
+  --yk-muted:       #98938B;
+  /* v2 · EN SOMBRE LES FILETS SONT RELATIFS, PAS ABSOLUS.
+     Un hex fixe se retrouve à l'intérieur de la plage des surfaces dès qu'on
+     touche la rampe d'élévation, et le filet disparaît. Un voile blanc
+     translucide se recalcule sur la surface qu'il borde : ~1,4:1 sur surf-1/2,
+     ~1,3:1 sur surf-3, ~2,1:1 pour le filet fort. Les deux échelles ne
+     peuvent plus se désynchroniser. */
+  --yk-line:        rgba(255,255,255,.11);
+  --yk-line-strong: rgba(255,255,255,.22);
+  --yk-grid:        rgba(242,240,236,.05);
+
+  /* v2 · rampe d'élévation sombre · c'est la VALEUR qui sépare, pas l'ombre.
+     surf-1 doit rester AU-DESSUS de --yk-ink-solid (#1A1816, verrouillé dans
+     tous les thèmes) : sinon la masse encre se confond avec un simple plan. */
+  --yk-surf-1:      #211E1B;
+  --yk-surf-2:      #282522;
+  --yk-surf-3:      #2E2A26;
+
+  /* v2 · rampe de texte sombre · les deux crans passent 4,5:1 jusqu'à --yk-surf-3,
+     la pire surface sur laquelle un kicker se pose réellement (carte survolée) */
+  --yk-ink-2:       #B5AFA6;  /* 6,8:1 sur --yk-surf-3 */
+  --yk-ink-3:       #9A938A;  /* 4,9:1 sur --yk-surf-3 · 5,4:1 sur --yk-surf-2 */
+
+  /* v2 · chrome flottant en verre */
+  --yk-chrome:      rgba(26,25,23,.58);
+  --yk-chrome-line: rgba(255,255,255,.12);
+  --yk-chrome-sheen: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent); /* @kind other */
+
+  /* v2 · en sombre l'ombre ne se lit pas : on la neutralise presque partout */
+  --yk-shadow-1:    0 1px 2px rgba(0,0,0,.45), 0 10px 26px -14px rgba(0,0,0,.65);
+  --yk-shadow-2:    0 2px 4px rgba(0,0,0,.5), 0 18px 44px -22px rgba(0,0,0,.75);
+
+  --yk-accent:      #FF6A2E;
+  --yk-accent-deep: #FF6A2E;  /* en sombre le remplissage reprend l'orange · libellé = --yk-on-accent (encre) */
+  --yk-accent-txt:  #FF8F5C;
+  --yk-on-accent:   #1D0E04;
+
+  /* v2 · vert de conformité · même clarté que l'orange sombre (#FF6A2E) */
+  --yk-ok:          oklch(.703 .16 149);
+  --yk-on-ok:       #08150A;
+
+  /* Alias re-déclarés ici pour que `.dark` fonctionne posé sur N'IMPORTE QUEL
+     conteneur (body, section…) · pas seulement sur <html>. Sans ça, les alias
+     calculés sur :root gardent leurs valeurs claires. */
+  --surface-page:   var(--yk-bg);
+  --surface-panel:  var(--yk-panel);
+  --surface-slat:   var(--yk-slat);
+  --surface-ink:    var(--yk-ink);
+  --text:           var(--yk-ink);
+  --text-muted:     var(--yk-muted);
+  --text-on-ink:    var(--yk-bg);
+  --border:         var(--yk-line);
+  --border-strong:  var(--yk-line-strong);
+  --edge:           var(--yk-accent);
+  --edge-txt:       var(--yk-accent-txt);
+  --on-edge:        var(--yk-on-accent);
+  --text-2:         var(--yk-ink-2);
+  --text-3:         var(--yk-ink-3);
+  --surface-1:      var(--yk-surf-1);
+  --surface-2:      var(--yk-surf-2);
+  --surface-3:      var(--yk-surf-3);
+}

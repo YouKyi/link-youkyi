@@ -1,0 +1,12 @@
+/* youkyi · DA oblique · DATA-VIZ
+   Formes droites uniquement : barres, colonnes, lignes en segments, hachures Φ.
+   Camembert, donut, courbes lissées : interdits. Grille 1px, valeurs en mono.
+   UNE seule série orange par graphique : celle qu'on souligne. */
+:root {
+  --viz-1:    var(--yk-ink);          /* série principale */
+  --viz-2:    var(--yk-muted);        /* série secondaire */
+  --viz-3:    var(--yk-line-strong);  /* série tertiaire */
+  --viz-4:    var(--yk-slat);         /* série de fond (avec filet) */
+  --viz-hot:  var(--yk-accent);       /* LA série soulignée · une seule */
+  --viz-grid: var(--yk-line);         /* grille 1px */
+}

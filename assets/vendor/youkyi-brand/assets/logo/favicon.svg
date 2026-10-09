@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="youkyi">
+  <!-- favicon youkyi — NEUTRE ADAPTATIF : suit le thème système pour rester lisible sur chrome claire ET sombre.
+       Clair : tuile encre + mark clair · Sombre : tuile claire + mark encre. Géométrie y-mark v1.1 scellée. -->
+  <style>
+    .tile{ fill:#14101C }
+    .mark{ fill:#F2F0EC }
+    @media (prefers-color-scheme: dark){
+      .tile{ fill:#F2F0EC }
+      .mark{ fill:#14101C }
+    }
+  </style>
+  <rect class="tile" width="512" height="512" rx="90.112" ry="90.112"/>
+  <g class="mark" transform="translate(50.564,51.041) scale(1.712)" fill-rule="evenodd"><path d="M56.459 30 L98.8197 30 L167.3607 209.4427 L125 209.4427 Z"/><path d="M183.541 30 L141.1803 30 L128.6603 62.778 L149.8406 118.2289 Z"/></g>
+</svg>

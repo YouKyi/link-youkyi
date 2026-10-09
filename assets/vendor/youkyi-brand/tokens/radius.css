@@ -1,0 +1,25 @@
+/* youkyi · DA v2 · RAYON
+   Le rayon est la forme par défaut ; la coupe à 21° devient une signature
+   (wordmark, y-mark, motifs de fond) et ne gouverne plus les contrôles.
+
+   PRINCIPE : le rayon suit la HAUTEUR, pour que la courbure paraisse
+   constante d'un contrôle à l'autre (~0,30 × hauteur). Un bouton de 40 px et
+   un champ de 44 px appartiennent ainsi à la même famille de forme, sans
+   qu'aucun des deux ne devienne une pilule.
+   La pilule est RÉSERVÉE aux formes dont la géométrie est ronde par nature :
+   piste de switch, barre de progression, pastille. Un rayon hors de cette
+   échelle est un bug. */
+
+:root {
+  --r-control-sm: 9px;   /* badge (h 26), bouton sm (h 32), petit tag */
+  --r-control:    12px;  /* bouton md/lg (h 40-48), tag (h 30), cellule de pagination */
+  --r-field:      14px;  /* champ, zone de texte, menu déroulant (h 44) */
+  --r-card:       16px;  /* carte, alerte, encadré, bloc de code, vignette */
+  --r-plan:       24px;  /* grand plan : section, hero, barre de nav flottante, modale, média */
+  --r-xs:         8px;   /* micro : code en ligne, poignée, pastille carrée */
+  --r-check:      6px;   /* case à cocher (20 px) · assez faible pour rester carrée :
+                            au-delà de ~7 px un carré de 20 px se lit comme un radio */
+  --r-pill:       999px; /* RÉSERVÉ : piste de switch, progression, pastille ronde */
+
+  --radius: var(--r-card); /* alias par défaut · l'ancienne valeur 0 est abandonnée en v2 */
+}

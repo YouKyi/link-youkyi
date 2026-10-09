@@ -1,0 +1,59 @@
+/* youkyi · DA oblique · TYPOGRAPHIE
+   Reprend les choix de la planche. Quatre familles, un rôle chacune.
+   Fontes servies par Google Fonts (open-source) · voir fonts.css. */
+
+:root {
+  /* ---- familles ---- */
+  /* v2.1 : Poppins CONSERVÉE pour les titres (arbitrage Alexandre · la planche
+     `preview/typo-v2.html` proposait de la retirer, décision inverse).
+     Space Grotesk reste le wordmark et le grand display. */
+  --font-display: "Space Grotesk", system-ui, sans-serif; /* wordmark, grand display */
+  --font-head:    "Poppins", system-ui, sans-serif;        /* titres H1→H4, en-têtes */
+  --font-body:    "Inter", system-ui, sans-serif;          /* corps de texte, interface, libellés de boutons */
+  --font-mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; /* données, code, mesures, identifiants */
+  --font-legacy:  "Poppins", system-ui, sans-serif;        /* alias historique · identique à --font-head */
+
+  /* ---- échelle de tailles (échelle DOCUMENT, celle de la charte) ----
+     UI dense : descendre d'un cran (body-sm, h-1). */
+  --fs-display-1: 56px;
+  --fs-display-2: 46px;
+  --fs-display-3: 38px;
+  --fs-h1:        38px;
+  --fs-h2:        24px;
+  --fs-h3:        20px;
+  --fs-h4:        17px;
+  --fs-h5:        15px;
+  --fs-h6:        14px;
+  --fs-body:      15px;
+  --fs-body-sm:   13.5px;
+  --fs-body-xs:   12px;
+  --fs-mono:      11px;
+  --fs-mono-sm:   10px;
+  --fs-mono-xs:   9px;
+
+  /* ---- graisses ---- */
+  --fw-reg:  400; /* @kind font */
+  --fw-med:  500; /* @kind font */
+  --fw-semi: 600; /* @kind font */
+  --fw-bold: 700; /* @kind font */
+  --fw-black: 800; /* @kind font */ /* régime « déclaration » · planches de marque uniquement */
+
+  /* ---- interlignes ---- */
+  --lh-tight: 1.1;   /* @kind other */ /* display */
+  --lh-head:  1.2;   /* @kind other */ /* titres */
+  --lh-body:  1.5;   /* @kind other */ /* corps */
+  --lh-mono:  1.75;  /* @kind other */ /* terminal */
+
+  /* ---- interlettrage ----
+     v2 : l'interlettrage suit la TAILLE. Plus le texte est grand, plus il se
+     serre ; le corps reste à zéro. Plancher absolu : -0.04em. */
+  --ls-display: -.04em;  /* wordmark, display 38px et plus */
+  --ls-h1:      -.035em;
+  --ls-h2:      -.025em;
+  --ls-h3:      -.02em;
+  --ls-h4:      -.015em;
+  --ls-body:     0;      /* @kind other */
+  --ls-kicker:  .22em;   /* kicker mono en capitales · UN SEUL par page */
+  --ls-label:   .2em;    /* étiquette mono */
+  --ls-mono:    .04em;   /* mono courant */
+}

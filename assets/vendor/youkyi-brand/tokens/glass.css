@@ -1,0 +1,114 @@
+/* youkyi · DA v2 · VERRE · MATIÈRE C « verre localisé »
+   RÈGLE V2, non négociable : le verre est réservé au CHROME FLOTTANT · la
+   barre de navigation, un panneau posé au-dessus du contenu. Partout ailleurs
+   c'est de l'encre pleine, et c'est la VALEUR qui sépare les plans.
+   Jamais de verre sur une carte, un champ ou un fond de section : un flou
+   appliqué partout ne se voit plus, il ne fait que coûter.
+   UNE EXCEPTION, une seule · les actions d'un hero posé sur une photographie
+   (templates/site, .yk-hero--massif) prennent le verre du chrome, parce que la
+   nav flotte déjà au-dessus de la même image et qu'un bouton opaque y lirait
+   comme un rectangle collé. Le bouton primaire, lui, reste plein : le signal
+   orange ne se dilue pas. Hors de ce cas, un bouton n'est jamais en verre.
+   Utiliser .yk-chrome (v2). Les helpers .yk-verre / .yk-glass ci-dessous sont
+   conservés pour les artefacts v1 et les planches de marque. */
+
+:root {
+  /* ---- surface de verre ---- */
+  --yk-glass-fill:      rgba(255,255,255,.05);   /* remplissage translucide, très discret */
+  --yk-glass-fill-soft: rgba(255,255,255,.031);  /* variante faible : champ, badge, vignette */
+  --yk-glass-blur:      2px;                      /* flou d'arrière-plan (plat, net) */
+  --yk-glass-shadow:    0 16px 36px -28px rgba(26,24,22,.4); /* portée basse, posée */
+  --yk-sheen:           rgba(255,255,255,.5);     /* filet de lumière sur l'arête haute */
+
+  /* ---- filets translucides (sur verre : laissent voir le semis) ---- */
+  --yk-hair:            rgba(26,24,22,.10);       /* 1px par défaut sur verre */
+  --yk-hair-strong:     rgba(26,24,22,.20);       /* arête de construction sur verre */
+
+  /* ---- fond porteur : semis (hachures 21°) + bloom orange ---- */
+  --yk-semis:           rgba(26,24,22,.04);       /* trait de la hachure de fond */
+  --yk-bloom-a:         rgba(214,71,13,.09);      /* lueur orange haute, dense */
+  --yk-bloom-b:         rgba(214,71,13,.04);      /* lueur orange basse, diffuse */
+
+  /* ---- arête orange : halo (nul en clair, présent en sombre) ---- */
+  --yk-edge-glow:       0 0 0 rgba(0,0,0,0);
+}
+
+.dark, [data-theme="dark"] {
+  --yk-glass-fill:      rgba(255,255,255,.02);
+  --yk-glass-fill-soft: rgba(255,255,255,.01);
+  --yk-glass-blur:      2px;
+  --yk-glass-shadow:    0 18px 44px -30px rgba(0,0,0,.85);
+  --yk-sheen:           rgba(255,255,255,.07);
+
+  --yk-hair:            rgba(255,255,255,.11);
+  --yk-hair-strong:     rgba(255,255,255,.22);
+
+  --yk-semis:           rgba(242,240,236,.03);
+  --yk-bloom-a:         rgba(255,106,46,.15);
+  --yk-bloom-b:         rgba(255,106,46,.06);
+
+  --yk-edge-glow:       0 0 9px rgba(255,106,46,.55);
+}
+
+/* ---- v2 · CHROME FLOTTANT : la seule surface en verre ----
+   Tokens dans colors.css (--yk-chrome, --yk-chrome-line, --yk-chrome-blur).
+   Le liseré haut capte la lumière et fait lire la couche comme une matière. */
+.yk-chrome {
+  position: relative;
+  background: var(--yk-chrome);
+  -webkit-backdrop-filter: blur(var(--yk-chrome-blur)) saturate(1.5);
+  backdrop-filter: blur(var(--yk-chrome-blur)) saturate(1.5);
+  border: 1px solid var(--yk-chrome-line);
+  border-radius: var(--r-plan);
+}
+.yk-chrome::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 1px;
+  border-radius: inherit; background: var(--yk-chrome-sheen); pointer-events: none;
+}
+/* Transparence réduite : le chrome devient opaque, le flou disparaît. */
+@media (prefers-reduced-transparency: reduce) {
+  .yk-chrome { background: var(--yk-surf-1); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ---- v1 (legacy) · fond porteur du verre taillé ----
+   Deux fonds empilés sur l'élément lui-même (pas de ::before) : le contenu
+   se pose naturellement au-dessus, et le backdrop-filter des enfants floute
+   bien ce fond. Semis à 21° (la pente Φ), bloom orange en haut-droite. */
+.yk-verre {
+  background-color: var(--surface-page);
+  background-image:
+    repeating-linear-gradient(21deg, transparent 0 30px, var(--yk-semis) 30px 31px),
+    radial-gradient(820px 480px at 88% -80px, var(--yk-bloom-a), transparent 62%);
+  background-repeat: no-repeat;
+  background-attachment: local, local;
+}
+
+/* ---- surface de verre (helper non-React · les composants inlinent le même) ----
+   Coupe douce à la pente Φ (bevel 42/16). Filet + sheen + ombre portent la
+   matière ; le remplissage reste quasi invisible. */
+.yk-glass {
+  position: relative;
+  background: var(--yk-glass-fill);
+  -webkit-backdrop-filter: blur(var(--yk-glass-blur)) saturate(1.06);
+  backdrop-filter: blur(var(--yk-glass-blur)) saturate(1.06);
+  border: 1px solid var(--yk-hair);
+  box-shadow: var(--yk-glass-shadow);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--bevel-dx)) 0,
+    100% var(--bevel-dy),
+    100% 100%, 0 100%
+  );
+}
+.yk-glass::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px;
+  background: var(--yk-sheen); clip-path: inherit; pointer-events: none;
+}
+/* arête orange sur la coupe (le signal). Longueur = hypoténuse de la coupe. */
+.yk-glass--edge::after {
+  content: ""; position: absolute; left: calc(100% - var(--bevel-dx)); top: 0;
+  width: 44.9px; /* hypot(42,16) ≈ 44.9 */ height: var(--edge-w-strong);
+  margin-top: calc(var(--edge-w-strong) / -2);
+  background: var(--yk-accent); box-shadow: var(--yk-edge-glow);
+  transform-origin: 0 0; transform: rotate(20.9deg); pointer-events: none;
+}

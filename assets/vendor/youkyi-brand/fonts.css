@@ -1,0 +1,11 @@
+/* youkyi · DA oblique · FONTES (self-hosted · souveraineté / RGPD)
+   Zéro requête tierce. Familles OFL. Bascule Google → local : faite.
+   Space Grotesk (display) · Poppins (titres) · Inter (corps) ·
+   IBM Plex Mono (données, code, mesures).
+
+   Les huit @font-face sont déclarés UNE seule fois, dans assets/fonts/fonts.css,
+   à chemins locaux : ce dossier part tel quel dans le kit Nextcloud
+   (dist/youkyi-kit/03-typographies/) et doit donc rester autoporteur.
+   Ce fichier n'est que le point d'entrée du design system. */
+
+@import "./assets/fonts/fonts.css";

@@ -5,12 +5,12 @@
   "description": "Pages de liens (link in bio) YouKyi : variantes pro et link, générées depuis des configs JSON.",
   "scripts": {
     "build:gen": "node build/generate.mjs",
-    "build:css": "tailwindcss -i ./src/input.css -o ./assets/tailwind.css --minify",
-    "build": "node build/generate.mjs && tailwindcss -i ./src/input.css -o ./assets/tailwind.css --minify && node build/generate.mjs --copy-css",
-    "watch": "tailwindcss -i ./src/input.css -o ./assets/tailwind.css --watch",
+    "build:css": "tailwindcss --postcss -i ./src/input.css -o ./assets/tailwind.css --minify",
+    "build": "node build/generate.mjs && npm run build:css && node build/generate.mjs --copy-css",
+    "watch": "tailwindcss --postcss -i ./src/input.css -o ./assets/tailwind.css --watch",
     "dev": "npm run build && npx --yes serve apps/link",
     "tune": "npx --yes serve -l 4173 .",
-    "test": "node --check build/generate.mjs && node --check assets/vendor/datacenter.js && node --check assets/vendor/dc-textures.js && node --check assets/vendor/dc-panel.js && node build/generate.mjs"
+    "test": "node --check build/generate.mjs && node --check assets/vendor/datacenter.js && node --check assets/vendor/dc-textures.js && node --check assets/vendor/dc-racks.js && node --check assets/vendor/dc-panel.js && node build/check-scene.mjs && node build/check-video.mjs && npm run build && node build/check-pages.mjs"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17"

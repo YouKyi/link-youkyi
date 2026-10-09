@@ -1,0 +1,18 @@
+/* youkyi · DA oblique · ENTRÉE GLOBALE
+   Linker CE fichier en tête de tout artefact · c'est la SEULE entrée du
+   système. Liste d'@imports uniquement. */
+
+@import "./fonts.css";
+@import "./tokens/colors.css";
+@import "./tokens/geometry.css";
+@import "./tokens/radius.css";
+@import "./tokens/glass.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import url('tokens/motion.css');
+@import url('tokens/dataviz.css');
+@import "./tokens/base.css";
+
+/* Couche d'interface · les classes publiques (Button, Input, Card…).
+   Les composants React n'en sont qu'un habillage. */
+@import "./ui/yk-ui.css";

@@ -1,0 +1,32 @@
+/* youkyi · DA v2 · MOUVEMENT
+   Décélération exponentielle : la surface part vite et se pose. Un seul
+   moment écrit par page ; tout le reste est du retour d'état, court.
+   Zéro rebond, zéro entrée qui part de scale(0), et aucune boucle infinie dans
+   l'interface : la dérive d'ambiance du hero a été retirée, le fond est une
+   image fixe.
+   UNE SEULE EXCEPTION, cadrée · l'indicateur d'attente. Tant qu'un chargement
+   dure, quelque chose doit bouger, sinon la page paraît morte. Elle ne vaut que
+   pour un état transitoire visible (le balayage du loader de site), jamais pour
+   un décor : la boucle s'arrête avec l'attente, et elle est suspendue sous
+   prefers-reduced-motion. Toute autre boucle infinie est un bug. */
+
+:root {
+  /* ---- courbes ---- */
+  --ease-out: cubic-bezier(.16, 1, .3, 1);    /* @kind other */ /* entrée, arrivée, tout ce qui répond à l'utilisateur */
+  --ease-io:  cubic-bezier(.77, 0, .175, 1);  /* @kind other */ /* déplacement d'un élément déjà à l'écran */
+  --ease:     linear;                          /* @kind other */ /* réservé : fil d'arête, marquee, progression */
+
+  /* ---- durées ---- */
+  --dur-press:   120ms;  /* @kind other */ /* retour de clic, survol de contrôle */
+  --dur-state:   180ms;  /* @kind other */ /* changement d'état, filtre, bascule */
+  --dur-surface: 260ms;  /* @kind other */ /* panneau, modale, tiroir, bascule de thème */
+  --dur-focal:   600ms;  /* @kind other */ /* le moment écrit de la page · un seul */
+
+  /* ---- appui ---- */
+  --press-scale: .97;    /* @kind other */ /* tout élément pressable descend à 97 % · jamais moins de 95 % */
+
+  /* ---- legacy (artefacts v1 · ne pas utiliser en v2) ---- */
+  --dur-1: 120ms;  /* @kind other */
+  --dur-2: 150ms;  /* @kind other */
+  --dur-3: 220ms;  /* @kind other */
+}
