@@ -13,6 +13,6 @@
     "test": "node --check build/generate.mjs && node --check assets/vendor/datacenter.js && node --check assets/vendor/dc-textures.js && node --check assets/vendor/dc-racks.js && node --check assets/vendor/dc-panel.js && node build/check-scene.mjs && node build/check-video.mjs && npm run build && node build/check-pages.mjs"
   },
   "devDependencies": {
-    "tailwindcss": "3.4.19"
+    "tailwindcss": "4.3.5"
   }
 }
